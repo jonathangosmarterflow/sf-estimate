@@ -133,16 +133,18 @@ section.block{position:relative;z-index:1;padding:72px 0}
 h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-height:1.12;color:#fff;text-wrap:balance}
 .sec-sub{text-align:center;color:var(--muted);font-size:16.5px;max-width:600px;margin:0 auto 44px}
 
-/* how it works */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.step{background:var(--panel);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px;backdrop-filter:blur(6px)}
+/* how it works — grouped in ONE framed band so it reads as a single process, not 3 loose boxes */
+.zone{background:rgba(255,255,255,.028);border:1px solid rgba(255,255,255,.09);border-radius:26px;padding:52px 44px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:34px}
+.step{background:transparent;border:0;border-radius:0;padding:0;position:relative}
+.zone .steps>.step:not(:last-child)::after{content:"";position:absolute;top:17px;right:-13px;width:14px;height:1px;background:rgba(255,255,255,.16)}
 .step .n{font-family:var(--head);font-weight:800;font-size:15px;color:#04120c;background:linear-gradient(100deg,var(--bl),var(--cy));width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
 .step h3{font-size:18px;margin-bottom:7px;color:#fff}
 .step p{margin:0;color:var(--muted);font-size:14.5px}
 
-/* testimonials */
-.quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.quote{background:var(--panel);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:24px;backdrop-filter:blur(6px)}
+/* testimonials — open, airy quotes (no boxes) so they contrast the framed process band above */
+.quotes{display:grid;grid-template-columns:repeat(3,1fr);gap:34px}
+.quote{background:transparent;border:0;border-left:2px solid rgba(62,224,255,.4);border-radius:0;padding:2px 6px 2px 22px}
 .quote .stars{color:#f5b301;font-size:15px;letter-spacing:2px;margin-bottom:12px}
 .quote p{font-size:14.5px;margin:0 0 16px;color:var(--ink);line-height:1.62}
 .quote .who{font-size:13.5px;color:var(--cy);font-weight:700}
@@ -279,6 +281,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
 <!-- ===== HOW IT WORKS ===== -->
 <section class="block">
   <div class="wrap">
+   <div class="zone">
     <div class="kicker">How it works</div>
     <h2 class="sec">Three steps, mostly hands-off</h2>
     <div class="steps">
@@ -286,6 +289,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
       <div class="step"><div class="n">2</div><h3>Free audit call</h3><p>When you&#39;re ready, we plug into your account live, run an AI-powered audit, and lock the exact plan together. Still no obligation.</p></div>
       <div class="step"><div class="n">3</div><h3>We build it</h3><p>We build it right, keep you updated on your schedule, and you never have to chase us for status.</p></div>
     </div>
+   </div>
   </div>
 </section>
 
