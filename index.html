@@ -93,14 +93,20 @@ a{color:var(--cy)}
 .backl{font-size:12.5px;font-weight:600;background:none;border:0;cursor:pointer;padding:0;margin-top:14px;font-family:inherit;opacity:.75;color:var(--muted2)}
 .backl:hover{opacity:1}
 
+/* multi-select + compact grid chips */
+.chips.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips.grid2 .chip{font-size:13.5px;padding:11px 12px}
+.chip .tick{width:17px;height:17px;flex:0 0 17px;border-radius:5px;border:1.5px solid rgba(255,255,255,.3);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:transparent;transition:.14s}
+.chip.picked .tick{background:var(--em);border-color:var(--em);color:#04120c}
+.skiplink{display:inline-block;background:none;border:0;cursor:pointer;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--muted2);text-decoration:underline;padding:0;margin-top:14px}
+.skiplink:hover{color:var(--cy)}
+.navrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+
 /* live estimate panel */
 .est{margin-top:18px;border-radius:14px;padding:15px 17px 13px;position:relative;overflow:hidden;background:rgba(7,12,24,.6);border:1px solid rgba(62,224,255,.25)}
 .elabel{font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px;color:var(--cy)}
 .elabel .live{width:7px;height:7px;border-radius:50%;background:var(--em);animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-.enums{display:flex;align-items:baseline;gap:16px;margin:7px 0 9px;flex-wrap:wrap}
-.eprice{font-family:var(--head);font-weight:800;font-size:23px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 24px rgba(62,224,255,.35)}
-.ehrs{font-family:var(--mono);font-weight:600;font-size:14px;color:#9fc0e8}
 .ewait{font-size:13px;margin:6px 0 8px;font-style:italic;color:var(--muted2)}
 .acc{display:flex;align-items:center;gap:10px}
 .acc>span{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2)}
@@ -115,7 +121,6 @@ a{color:var(--cy)}
 .done svg path{stroke:var(--em);stroke-dasharray:48;stroke-dashoffset:48;animation:draw .45s .65s forwards cubic-bezier(.6,0,.4,1)}
 @keyframes draw{to{stroke-dashoffset:0}}
 .dtitle{font-family:var(--head);font-weight:800;font-size:21px;letter-spacing:-.02em;margin-bottom:8px;color:#fff}
-.drange{font-size:15px;font-weight:600;line-height:1.5;margin-bottom:12px;color:var(--ink)}
 .dsub{font-size:13.5px;line-height:1.55;max-width:340px;margin:0 auto 16px;color:var(--muted)}
 .dbtn{display:inline-block;padding:13px 26px;border-radius:11px;font-family:var(--head);font-weight:800;font-size:15px;text-decoration:none;background:var(--em);color:#04120c;box-shadow:0 0 30px rgba(22,201,141,.4);transition:.16s}
 .dbtn:hover{transform:translateY(-2px);box-shadow:0 0 46px rgba(22,201,141,.6)}
@@ -186,11 +191,11 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
       <div class="copy">
         <span class="eyebrow">Free &middot; Instant &middot; No sales call</span>
         <h1>Know exactly what your HighLevel project <em>costs &amp; takes</em>, before you spend a dollar.</h1>
-        <p class="sub">Answer a few quick questions and watch your real estimate build itself, hours and price, then get the full version in your inbox in minutes. Backed by 65+ five-star HighLevel reviews.</p>
+        <p class="sub">Answer a few quick questions and your real, personalized estimate, hours and price, lands in your inbox in minutes. Backed by 65+ five-star HighLevel reviews.</p>
         <div class="proofrow">
           <div class="pi"><b>65+</b><span>five-star reviews</span></div>
           <div class="pi"><b>#3</b><span>on the HighLevel Directory</span></div>
-          <div class="pi"><b>60 sec</b><span>to your live estimate</span></div>
+          <div class="pi"><b>60 sec</b><span>to request your estimate</span></div>
         </div>
       </div>
 
@@ -198,7 +203,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
       <div class="formwrap">
         <div class="convo" id="convo">
           <div class="ctop">
-            <div class="stepl">Step <span class="snum">1</span> of 4</div>
+            <div class="stepl">Step <span class="snum">1</span> of 7</div>
             <div class="pbar"><i id="pbar"></i></div>
           </div>
           <div class="qa">
@@ -224,43 +229,70 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               </div>
               <button class="cbtn go1" id="go1">Start my estimate</button>
               <div class="err" id="err0">Please add your name, a valid email, and your phone number.</div>
-              <div class="fine">Free. No sales call. Takes about 40 seconds.</div>
+              <div class="fine">Free. No sales call. Takes about 60 seconds.</div>
             </div>
-            <!-- STEP 1: scope -->
+            <!-- STEP 1: business -->
             <div class="screen s1">
-              <div class="q">What do you need built?</div>
-              <div class="chips chips-scope"></div>
+              <div class="q">Tell us about your business.</div>
+              <label for="f-biz">Business name</label>
+              <input id="f-biz" placeholder="Acme Home Services">
+              <label for="f-web">Business website</label>
+              <input id="f-web" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com">
+              <button class="cbtn" id="go2">Continue</button>
+              <div class="err" id="err1">Please add your business name and website (or use skip below).</div>
+              <div class="navrow"><button class="backl">&#8592; back</button><button class="skiplink" id="skipweb" type="button">No website yet? Skip &#8594;</button></div>
             </div>
-            <!-- STEP 2: account -->
+            <!-- STEP 2: industry -->
             <div class="screen s2">
+              <div class="q">What industry are you in?</div>
+              <div class="chips grid2 chips-industry"></div>
+              <div id="indother" style="display:none">
+                <label for="f-industry-other">Your industry</label>
+                <input id="f-industry-other" placeholder="e.g. Solar installers">
+                <button class="cbtn" id="goInd">Continue</button>
+                <div class="err" id="err2">Please tell us your industry.</div>
+              </div>
+              <button class="backl">&#8592; back</button>
+            </div>
+            <!-- STEP 3: team size -->
+            <div class="screen s3">
+              <div class="q">How big is your team?</div>
+              <div class="chips chips-team"></div>
+              <button class="backl">&#8592; back</button>
+            </div>
+            <!-- STEP 4: needs (multi-select) -->
+            <div class="screen s4">
+              <div class="q">What do you need? Pick all that apply.</div>
+              <div class="chips grid2 chips-needs"></div>
+              <button class="cbtn" id="goNeeds">Continue &#8594;</button>
+              <div class="err" id="err4">Pick at least one, or choose &#8220;Not sure yet&#8221;.</div>
+              <button class="backl">&#8592; back</button>
+            </div>
+            <!-- STEP 5: account -->
+            <div class="screen s5">
               <div class="q">What&#39;s in your HighLevel account today?</div>
               <div class="chips chips-account"></div>
               <button class="backl">&#8592; back</button>
             </div>
-            <!-- STEP 3: timeline -->
-            <div class="screen s3">
+            <!-- STEP 6: timeline -->
+            <div class="screen s6">
               <div class="q">When do you want it live?</div>
               <div class="chips chips-time"></div>
               <button class="backl">&#8592; back</button>
             </div>
-            <!-- STEP 4: done -->
-            <div class="screen s4">
+            <!-- STEP 7: done -->
+            <div class="screen s7">
               <div class="done">
                 <svg viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="26" stroke-width="3.5"/><path d="M19 31l8 8 15-17" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <div class="dtitle">Thank you! Your estimate is on its way</div>
-                <div class="drange" id="drange"></div>
-                <div class="dsub" id="dsub">We just sent your personalized estimate to your inbox, arriving in the next few minutes from Jonathan at gosmarterflow.com. Check spam if you don&#39;t see it.</div>
+                <div class="dsub" id="dsub">We just sent your personalized estimate, hours and price, to your inbox from Jonathan at gosmarterflow.com. Check spam if you don&#39;t see it.</div>
                 <a class="dbtn" id="dbtn" href="https://gosmarterflow.com/consult">Book your free audit call &rarr;</a>
               </div>
             </div>
           </div>
           <div class="est">
             <div class="elabel"><span class="live"></span>Your estimate</div>
-            <div class="ewait" id="ewait">Answer 3 quick questions and watch it build&hellip;</div>
-            <div class="enums" id="enums" style="display:none">
-              <span class="eprice" id="eprice">$0 - $0</span>
-              <span class="ehrs" id="ehrs">Project-based, fixed for your scope</span>
-            </div>
+            <div class="ewait" id="ewait">Answer the quick questions and we&#39;ll calculate your real estimate as you go&hellip;</div>
             <div class="acc"><span>Progress</span><div class="accbar"><i id="accbar"></i></div><span class="accpct" id="accpct">0%</span></div>
           </div>
         </div>
@@ -273,7 +305,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
 <div class="trust">
   <div class="wrap">
     <span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-    <span class="tline">Rated <b>5/5</b> across <b>65+ reviews</b> on the official HighLevel Directory &middot; <b>#3</b> most-reviewed &middot; estimate in <b>60 seconds</b></span>
+    <span class="tline">Rated <b>5/5</b> across <b>65+ reviews</b> on the official HighLevel Directory &middot; <b>#3</b> most-reviewed &middot; your estimate <b>in your inbox in minutes</b></span>
   </div>
 </div>
 
@@ -448,26 +480,55 @@ var ACCOUNTS=[
 ];
 /* ===EST-TABLE-END=== */
 var TIMES=[{label:"ASAP"},{label:"2-4 weeks"},{label:"Flexible"}];
+var INDUSTRIES=[{label:"Agency / Marketing"},{label:"Real Estate"},{label:"Home & Trade Services"},{label:"Health / Wellness / Med Spa"},{label:"Fitness & Gyms"},{label:"Coaching / Consulting"},{label:"E-commerce / Retail"},{label:"Professional Services"},{label:"Automotive"},{label:"Education / Courses"},{label:"SaaS / Tech"},{label:"Other",other:true}];
+var TEAMS=[{label:"Just me"},{label:"2-10"},{label:"11-50"},{label:"51-200"},{label:"200+"}];
+/* Multi-select needs. Hour ranges pull from the engine's learned SCOPES table above wherever a
+   mapping exists (weekly regens flow through automatically). The three static lo/hi entries
+   (ai/crm/integrations) are taxonomy fallbacks (estimate-taxonomy.md) until the regen script
+   owns a NEEDS block too. Estimate is computed for the payload/email only — never shown on-page. */
+var NEEDS=[
+  {label:"Sales funnel or landing pages",key:"funnel"},
+  {label:"Automations & follow-up workflows",key:"auto"},
+  {label:"Full HighLevel build, from scratch",key:"full"},
+  {label:"AI chatbot or voice AI",key:"ai",lo:12,hi:25},
+  {label:"CRM, pipelines & opportunities",key:"crm",lo:6,hi:12},
+  {label:"Integrations & API connections",key:"integr",lo:4,hi:10},
+  {label:"Fix or troubleshoot an issue",key:"fix"},
+  {label:"Migrate me into HighLevel",key:"migrate"},
+  {label:"Not sure yet, I need guidance",key:"unsure",exclusive:true}
+];
+function needHours(n){
+  switch(n.key){
+    case "funnel":return[SCOPES[0].lo*.45,SCOPES[0].hi*.45];
+    case "auto":return[SCOPES[0].lo*.55,SCOPES[0].hi*.55];
+    case "full":return[SCOPES[1].lo,SCOPES[1].hi];
+    case "migrate":return[SCOPES[2].lo,SCOPES[2].hi];
+    case "fix":return[SCOPES[3].lo,SCOPES[3].hi];
+    case "unsure":return[SCOPES[4].lo,SCOPES[4].hi];
+    default:return[n.lo,n.hi];
+  }
+}
 
 var screens=document.querySelectorAll("#convo .screen");
 var snum=document.querySelector("#convo .snum"),bar=document.getElementById("pbar");
-var est={wait:document.getElementById("ewait"),nums:document.getElementById("enums"),price:document.getElementById("eprice"),hrs:document.getElementById("ehrs"),accbar:document.getElementById("accbar"),accpct:document.getElementById("accpct")};
-var state={scope:null,account:null,time:null,shownLo:0,shownHi:0};
-var stepPct=[8,35,64,90,100],lastShown=-1;
+var est={wait:document.getElementById("ewait"),accbar:document.getElementById("accbar"),accpct:document.getElementById("accpct")};
+var state={needs:[],industry:null,team:null,account:null,time:null};
+var stepPct=[6,18,30,42,58,76,90,100],lastShown=-1,cur=0;
 
 function show(i){
   screens.forEach(function(sc,j){sc.classList.toggle("on",j===i)});
-  snum.textContent=Math.min(i+1,4);
+  snum.textContent=Math.min(i+1,7);
   bar.style.width=stepPct[i]+"%";
   if(i>=1&&i>lastShown){var rc=document.getElementById("convo").getBoundingClientRect();confetti.burst(rc.left+rc.width/2,rc.top+Math.min(180,rc.height*.32))}
-  lastShown=i;
+  lastShown=Math.max(lastShown,i);cur=i;
 }
-function chips(sel,items,onpick){
+function chips(sel,items,onpick,multi){
   var box=document.querySelector(sel);
   items.forEach(function(it,idx){
     var b=document.createElement("button");b.className="chip";b.type="button";
-    b.innerHTML="<span>"+it.label+"</span><span class='arr'>&rarr;</span>";
+    b.innerHTML="<span>"+it.label+"</span><span class='"+(multi?"tick'>&#10003;":"arr'>&rarr;")+"</span>";
     b.addEventListener("click",function(){
+      if(multi){onpick(idx,b);return}
       box.querySelectorAll(".chip").forEach(function(c){c.classList.remove("picked")});
       b.classList.add("picked");
       setTimeout(function(){onpick(idx)},260);
@@ -475,30 +536,33 @@ function chips(sel,items,onpick){
     box.appendChild(b);
   });
 }
+/* combined range from multi-select needs (payload/email only, never rendered) */
 function range(){
-  if(state.scope==null)return null;
-  var sc=SCOPES[state.scope],lo=sc.lo,hi=sc.hi;
+  if(!state.needs.length)return null;
+  var sel=state.needs.map(function(i){return NEEDS[i]});
+  var lo=0,hi=0;
+  if(sel.length===1&&sel[0].key==="unsure"){lo=SCOPES[4].lo;hi=SCOPES[4].hi}
+  else{
+    var keys=sel.map(function(n){return n.key}),parts=[];
+    if(keys.indexOf("funnel")>-1&&keys.indexOf("auto")>-1){
+      parts.push([SCOPES[0].lo,SCOPES[0].hi]); /* learned combo scope covers both */
+      sel=sel.filter(function(n){return n.key!=="funnel"&&n.key!=="auto"});
+    }
+    sel.forEach(function(n){if(n.key!=="unsure")parts.push(needHours(n))});
+    var hasFull=keys.indexOf("full")>-1;
+    parts.sort(function(a,b){return b[1]-a[1]});
+    parts.forEach(function(p,i){
+      var w=i===0?1:(hasFull?.25:.7); /* overlap discount; a full build already includes much of the rest */
+      lo+=p[0]*w;hi+=p[1]*w;
+    });
+  }
   if(state.account!=null){lo+=ACCOUNTS[state.account].d[0];hi+=ACCOUNTS[state.account].d[1]}
-  lo=Math.max(4,lo);hi=Math.max(lo+3,hi);
+  lo=Math.max(4,Math.round(lo));hi=Math.max(lo+3,Math.round(hi));
   return[lo,hi];
 }
-function fmt(n){return"$"+n.toLocaleString("en-US")}
-function paint(lo,hi){
-  est.price.textContent=fmt(Math.round(lo*RATE))+" - "+fmt(Math.round(hi*RATE));
-}
-function updateEstimate(acc){
-  var r=range();if(!r)return;
-  est.wait.style.display="none";est.nums.style.display="flex";
+function updateEstimate(acc,msg){
   est.accbar.style.width=acc+"%";est.accpct.textContent=acc+"%";
-  if(reduced){paint(r[0],r[1]);state.shownLo=r[0];state.shownHi=r[1];return}
-  var fromLo=state.shownLo||Math.round(r[0]*.4),fromHi=state.shownHi||Math.round(r[1]*.4);
-  var t0=performance.now(),dur=800;
-  function tick(t){
-    var k=Math.min(1,(t-t0)/dur);k=1-Math.pow(1-k,3);
-    paint(Math.round(fromLo+(r[0]-fromLo)*k),Math.round(fromHi+(r[1]-fromHi)*k));
-    if(k<1)requestAnimationFrame(tick);else{state.shownLo=r[0];state.shownHi=r[1]}
-  }
-  requestAnimationFrame(tick);
+  if(msg)est.wait.innerHTML=msg;
 }
 
 /* ================= WEBHOOK POST (capture-first) ================= */
@@ -533,32 +597,90 @@ document.getElementById("go1").addEventListener("click",function(){
   var lead=baseLead();lead.lead_stage="started";post(lead); /* capture the contact NOW, even if they abandon */
   show(1);
 });
-chips(".chips-scope",SCOPES,function(i){state.scope=i;updateEstimate(46);show(2)});
-chips(".chips-account",ACCOUNTS,function(i){state.account=i;updateEstimate(74);show(3)});
+/* step 1: business name + website (website skippable, everything else required) */
+document.getElementById("go2").addEventListener("click",function(){
+  var biz=document.getElementById("f-biz"),web=document.getElementById("f-web");
+  var bad1=!biz.value.trim();biz.style.borderColor=bad1?"#ff7a7a":"";
+  var w=web.value.trim(),bad2=!w||w.indexOf(".")<0;web.style.borderColor=bad2?"#ff7a7a":"";
+  document.getElementById("err1").style.display=(bad1||bad2)?"block":"none";
+  if(bad1||bad2)return;
+  show(2);
+});
+document.getElementById("skipweb").addEventListener("click",function(){
+  var biz=document.getElementById("f-biz");
+  if(!biz.value.trim()){biz.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";return}
+  document.getElementById("f-web").value="";document.getElementById("err1").style.display="none";
+  show(2);
+});
+/* step 2: industry (Other reveals a text input instead of advancing) */
+chips(".chips-industry",INDUSTRIES,function(i){
+  var oth=document.getElementById("indother");
+  if(INDUSTRIES[i].other){state.industry=null;oth.style.display="block";try{document.getElementById("f-industry-other").focus()}catch(_){}return}
+  state.industry=INDUSTRIES[i].label;oth.style.display="none";show(3);
+});
+document.getElementById("goInd").addEventListener("click",function(){
+  var f=document.getElementById("f-industry-other");
+  if(!f.value.trim()){f.style.borderColor="#ff7a7a";document.getElementById("err2").style.display="block";return}
+  f.style.borderColor="";document.getElementById("err2").style.display="none";
+  state.industry="Other: "+f.value.trim();show(3);
+});
+/* step 3: team size */
+chips(".chips-team",TEAMS,function(i){state.team=i;show(4)});
+/* step 4: needs (multi-select; "Not sure" is exclusive) */
+chips(".chips-needs",NEEDS,function(i,btn){
+  var box=document.querySelector(".chips-needs"),all=box.querySelectorAll(".chip");
+  if(NEEDS[i].exclusive){
+    var on=!btn.classList.contains("picked");
+    all.forEach(function(c){c.classList.remove("picked")});
+    state.needs=[];
+    if(on){btn.classList.add("picked");state.needs=[i]}
+  }else{
+    NEEDS.forEach(function(n,j){if(n.exclusive&&all[j].classList.contains("picked")){all[j].classList.remove("picked");var k0=state.needs.indexOf(j);if(k0>-1)state.needs.splice(k0,1)}});
+    btn.classList.toggle("picked");
+    var k=state.needs.indexOf(i);
+    if(k>-1)state.needs.splice(k,1);else state.needs.push(i);
+  }
+  document.getElementById("err4").style.display="none";
+},true);
+document.getElementById("goNeeds").addEventListener("click",function(){
+  if(!state.needs.length){document.getElementById("err4").style.display="block";return}
+  updateEstimate(58,"Calculating your range from real project data&hellip; the full breakdown (hours + price) goes to your inbox.");
+  show(5);
+});
+/* step 5: account */
+chips(".chips-account",ACCOUNTS,function(i){state.account=i;updateEstimate(76,"Almost there&hellip; your estimate is taking shape.");show(6)});
+/* step 6: timeline -> done (estimate computed for the email/CRM only, never shown on-page) */
 chips(".chips-time",TIMES,function(i){
-  state.time=i;updateEstimate(92);
-  var r=range();
-  document.getElementById("drange").innerHTML="Your project estimate: <b>"+fmt(r[0]*RATE)+" - "+fmt(r[1]*RATE)+"</b>";
-  /* tier-based routing on the done screen (everyone still captured) */
+  state.time=i;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
   var dbtn=document.getElementById("dbtn"),dsub=document.getElementById("dsub");
+  var base="We just sent your personalized estimate, hours and price, to your inbox from Jonathan at gosmarterflow.com. It can take a few minutes; check spam if you don't see it. Want it even more accurate? Reply to that email with a bit more detail and we'll refine it.";
   if(selCountry.t>=4){
     dbtn.style.display="none";
-    dsub.textContent="We just sent your personalized estimate to your inbox, arriving in the next few minutes from Jonathan at gosmarterflow.com. We’ll follow up by email shortly.";
+    dsub.textContent=base+" We'll follow up by email shortly.";
   }else{
     dbtn.style.display="inline-block";
-    dsub.textContent="We just sent your personalized estimate to your inbox, arriving in the next few minutes from Jonathan at gosmarterflow.com. Want to go deeper? Book your free audit call below.";
+    dsub.textContent=base+" Want to go deeper right away? Book your free audit call below.";
   }
-  show(4);
-  var lead=baseLead();
+  show(7);
+  var r=range(),lead=baseLead();
   lead.lead_stage="completed";
-  lead.project_scope=SCOPES[state.scope].label;
+  lead.business=(document.getElementById("f-biz").value||"").trim();
+  var w=(document.getElementById("f-web").value||"").trim();
+  if(w&&!/^https?:\/\//i.test(w))w="https://"+w;
+  lead.business_website=w||"(none)";
+  lead.industry=state.industry||"";
+  lead.team_size=TEAMS[state.team]?TEAMS[state.team].label:"";
+  var needsTxt=state.needs.map(function(j){return NEEDS[j].label}).join("; ");
+  lead.needs=needsTxt;
+  lead.project_scope=needsTxt; /* keeps the existing HL note/field mapping working */
   lead.account_state=ACCOUNTS[state.account].label;
   lead.timeline=TIMES[state.time].label;
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
   post(lead);
 });
-document.querySelectorAll("#convo .backl").forEach(function(b,bi){b.addEventListener("click",function(){show(bi+1)})});
+/* full back-navigation: every screen after the contact step, picks preserved */
+document.querySelectorAll("#convo .backl").forEach(function(b){b.addEventListener("click",function(){show(Math.max(0,cur-1))})});
 
 /* ================= BOTTOM CTA -> smooth glide up to the form + glow pulse + focus ================= */
 document.getElementById("jumpEstimate").addEventListener("click",function(e){
