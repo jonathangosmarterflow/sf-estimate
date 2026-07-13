@@ -596,7 +596,12 @@ document.getElementById("go1").addEventListener("click",function(){
   document.getElementById("err0").style.display=ok?"none":"block";
   if(!ok)return;
   var lead=baseLead();lead.lead_stage="started";post(lead); /* capture the contact NOW, even if they abandon */
+  updateEstimate(12);
   show(1);
+});
+/* Jed feedback 7/11: hide the skip link once a website is typed, so filled data is never silently dropped */
+document.getElementById("f-web").addEventListener("input",function(){
+  document.getElementById("skipweb").style.display=this.value.trim()?"none":"inline-block";
 });
 /* step 1: business name + website (website skippable, everything else required) */
 document.getElementById("go2").addEventListener("click",function(){
@@ -605,28 +610,32 @@ document.getElementById("go2").addEventListener("click",function(){
   var w=web.value.trim(),bad2=!w||w.indexOf(".")<0;web.style.borderColor=bad2?"#ff7a7a":"";
   document.getElementById("err1").style.display=(bad1||bad2)?"block":"none";
   if(bad1||bad2)return;
+  updateEstimate(24);
   show(2);
 });
 document.getElementById("skipweb").addEventListener("click",function(){
   var biz=document.getElementById("f-biz");
   if(!biz.value.trim()){biz.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";return}
-  document.getElementById("f-web").value="";document.getElementById("err1").style.display="none";
+  /* Jed feedback 7/11: never clear a typed website on skip (skip is hidden when filled; guard anyway) */
+  if(!document.getElementById("f-web").value.trim())document.getElementById("f-web").value="";
+  document.getElementById("err1").style.display="none";
+  updateEstimate(24);
   show(2);
 });
 /* step 2: industry (Other reveals a text input instead of advancing) */
 chips(".chips-industry",INDUSTRIES,function(i){
   var oth=document.getElementById("indother");
   if(INDUSTRIES[i].other){state.industry=null;oth.style.display="block";try{document.getElementById("f-industry-other").focus()}catch(_){}return}
-  state.industry=INDUSTRIES[i].label;oth.style.display="none";show(3);
+  state.industry=INDUSTRIES[i].label;oth.style.display="none";updateEstimate(36);show(3);
 });
 document.getElementById("goInd").addEventListener("click",function(){
   var f=document.getElementById("f-industry-other");
   if(!f.value.trim()){f.style.borderColor="#ff7a7a";document.getElementById("err2").style.display="block";return}
   f.style.borderColor="";document.getElementById("err2").style.display="none";
-  state.industry="Other: "+f.value.trim();show(3);
+  state.industry="Other: "+f.value.trim();updateEstimate(36);show(3);
 });
 /* step 3: team size */
-chips(".chips-team",TEAMS,function(i){state.team=i;show(4)});
+chips(".chips-team",TEAMS,function(i){state.team=i;updateEstimate(47);show(4)});
 /* step 4: needs (multi-select; "Not sure" is exclusive) */
 chips(".chips-needs",NEEDS,function(i,btn){
   var box=document.querySelector(".chips-needs"),all=box.querySelectorAll(".chip");
@@ -695,13 +704,15 @@ document.getElementById("jumpEstimate").addEventListener("click",function(e){
   },reduced?0:540);
 });
 
-/* ================= CONSTELLATION NETWORK (light) =================
-   Slow-drifting nodes; lines connect nearby nodes. THE NETWORK CONNECTS MORE
-   AS THE FORM ADVANCES: net.weave(step) (called on each step advance, replacing
-   the old confetti) raises the connection reach + line presence a notch, so the
-   constellation quietly "learns" alongside the form. Subtle by design — clean,
-   professional, never competing with the form. Near the cursor links reach a
-   little further; click adds a few nodes. Honors prefers-reduced-motion. */
+/* ================= CONSTELLATION WEAVE (light) =================
+   THE FIELD: slow-drifting nodes, clearly connected from the first second
+   (strong baseline, like the gallery hero). THE WEAVE: net.weave(step) — fired
+   on each form-step advance (replaced the confetti) — tightens the network a
+   notch, so "the more we learn about your project, the more the dots connect."
+   Subtle by design: clean, professional, never competing with the form. Near
+   the cursor links reach a little further. No click-spawn (deliberate: only
+   the LEAD's answers densify the network, and it kills the fidget-toy
+   distraction). Honors prefers-reduced-motion. */
 var net=(function(){
   if(reduced)return{weave:function(){}};
   var host=document.getElementById("bgfx"),hero=document.getElementById("hero");
@@ -709,12 +720,12 @@ var net=(function(){
   var ctx=c.getContext("2d"),dpr=Math.min(devicePixelRatio,2);
   var ps=[],raf=null,mx=-1,my=-1,active=0,inf=0;
   var level=0,target=0,pulse=0;             /* progressive-connection state */
-  var BASE=86,GROW=62,MAXN=170;             /* px reach at step0 -> +GROW by step7 */
+  var BASE=118,GROW=46;                     /* px reach: strong from step0 -> +GROW by step7 */
   function size(){var r=host.getBoundingClientRect();if(r.width<2)return;c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);seed()}
   function node(x,y){var a=Math.random()*6.283,v=.12+Math.random()*.22;
     return{x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:(1.1+Math.random()*1.2),hue:Math.random()}}
   function seed(){
-    var want=Math.max(55,Math.min(140,Math.round((c.width*c.height)/(dpr*dpr*150*150))));
+    var want=Math.max(72,Math.min(160,Math.round((c.width*c.height)/(dpr*dpr*132*132))));
     while(ps.length<want)ps.push(node(Math.random()*c.width,Math.random()*c.height));
     if(ps.length>want)ps.length=want;
   }
@@ -722,16 +733,12 @@ var net=(function(){
   hero.addEventListener("pointermove",function(e){var r=c.getBoundingClientRect();if(r.width<2)return;
     mx=(e.clientX-r.left)*(c.width/r.width);my=(e.clientY-r.top)*(c.height/r.height);active=1});
   hero.addEventListener("pointerleave",function(){active=0});
-  hero.addEventListener("pointerdown",function(e){var r=c.getBoundingClientRect();
-    var cx=(e.clientX-r.left)*(c.width/r.width),cy=(e.clientY-r.top)*(c.height/r.height);
-    for(var k=0;k<5;k++)ps.push(node(cx+(Math.random()-.5)*40*dpr,cy+(Math.random()-.5)*40*dpr));
-    if(ps.length>MAXN)ps.splice(0,ps.length-MAXN)});
   function frame(){
     level+=(target-level)*.025;             /* ease toward the form's progress */
     pulse*=.955;                            /* soft one-time weave pulse per step */
     inf+=(active-inf)*.08;
-    var reach=(BASE+level*GROW+pulse*34)*dpr,R2=reach*reach;
-    var lineA=.09+level*.13;                /* lines get a touch more present as steps complete */
+    var reach=(BASE+level*GROW+pulse*30)*dpr,R2=reach*reach;
+    var lineA=.155+level*.10;               /* clearly woven at rest; a touch more present as steps complete */
     ctx.clearRect(0,0,c.width,c.height);
     for(var i=0;i<ps.length;i++){
       var p=ps[i];

@@ -595,7 +595,12 @@ document.getElementById("go1").addEventListener("click",function(){
   document.getElementById("err0").style.display=ok?"none":"block";
   if(!ok)return;
   var lead=baseLead();lead.lead_stage="started";post(lead); /* capture the contact NOW, even if they abandon */
+  updateEstimate(12);
   show(1);
+});
+/* Jed feedback 7/11: hide the skip link once a website is typed, so filled data is never silently dropped */
+document.getElementById("f-web").addEventListener("input",function(){
+  document.getElementById("skipweb").style.display=this.value.trim()?"none":"inline-block";
 });
 /* step 1: business name + website (website skippable, everything else required) */
 document.getElementById("go2").addEventListener("click",function(){
@@ -604,28 +609,32 @@ document.getElementById("go2").addEventListener("click",function(){
   var w=web.value.trim(),bad2=!w||w.indexOf(".")<0;web.style.borderColor=bad2?"#ff7a7a":"";
   document.getElementById("err1").style.display=(bad1||bad2)?"block":"none";
   if(bad1||bad2)return;
+  updateEstimate(24);
   show(2);
 });
 document.getElementById("skipweb").addEventListener("click",function(){
   var biz=document.getElementById("f-biz");
   if(!biz.value.trim()){biz.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";return}
-  document.getElementById("f-web").value="";document.getElementById("err1").style.display="none";
+  /* Jed feedback 7/11: never clear a typed website on skip (skip is hidden when filled; guard anyway) */
+  if(!document.getElementById("f-web").value.trim())document.getElementById("f-web").value="";
+  document.getElementById("err1").style.display="none";
+  updateEstimate(24);
   show(2);
 });
 /* step 2: industry (Other reveals a text input instead of advancing) */
 chips(".chips-industry",INDUSTRIES,function(i){
   var oth=document.getElementById("indother");
   if(INDUSTRIES[i].other){state.industry=null;oth.style.display="block";try{document.getElementById("f-industry-other").focus()}catch(_){}return}
-  state.industry=INDUSTRIES[i].label;oth.style.display="none";show(3);
+  state.industry=INDUSTRIES[i].label;oth.style.display="none";updateEstimate(36);show(3);
 });
 document.getElementById("goInd").addEventListener("click",function(){
   var f=document.getElementById("f-industry-other");
   if(!f.value.trim()){f.style.borderColor="#ff7a7a";document.getElementById("err2").style.display="block";return}
   f.style.borderColor="";document.getElementById("err2").style.display="none";
-  state.industry="Other: "+f.value.trim();show(3);
+  state.industry="Other: "+f.value.trim();updateEstimate(36);show(3);
 });
 /* step 3: team size */
-chips(".chips-team",TEAMS,function(i){state.team=i;show(4)});
+chips(".chips-team",TEAMS,function(i){state.team=i;updateEstimate(47);show(4)});
 /* step 4: needs (multi-select; "Not sure" is exclusive) */
 chips(".chips-needs",NEEDS,function(i,btn){
   var box=document.querySelector(".chips-needs"),all=box.querySelectorAll(".chip");
