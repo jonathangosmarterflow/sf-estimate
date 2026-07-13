@@ -684,6 +684,9 @@ chips(".chips-time",TIMES,function(i){
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
   post(lead);
+  /* instant-estimate trigger: nudge the 24/7 worker ~8s after the webhook lands in HL,
+     so the estimate email goes out in seconds instead of on the next minute tick */
+  setTimeout(function(){try{fetch("https://hook.gosmarterflow.com/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0"}),keepalive:true})}catch(e){}},8000);
 });
 /* full back-navigation: every screen after the contact step, picks preserved */
 document.querySelectorAll("#convo .backl").forEach(function(b){b.addEventListener("click",function(){show(Math.max(0,cur-1))})});
