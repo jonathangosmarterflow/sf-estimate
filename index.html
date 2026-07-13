@@ -664,15 +664,11 @@ chips(".chips-account",ACCOUNTS,function(i){state.account=i;updateEstimate(76,"A
 chips(".chips-time",TIMES,function(i){
   state.time=i;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
   var dbtn=document.getElementById("dbtn"),dsub=document.getElementById("dsub");
-  var base="We just sent your personalized estimate, hours and price, to your inbox from Jonathan at gosmarterflow.com. It can take a few minutes; check spam if you don't see it. Want it even more accurate? Reply to that email with a bit more detail and we'll refine it.";
-  if(selCountry.t>=4){
-    dbtn.style.display="none";
-    dsub.textContent=base+" We'll follow up by email shortly.";
-  }else{
-    dbtn.style.display="inline-block";
-    dsub.textContent=base+" Want to go deeper right away? Book your free audit call below.";
-  }
+  dsub.textContent="Taking you to your next step…";
+  dbtn.style.display="inline-block";dbtn.textContent="See your next step →";dbtn.href="thanks.html?t="+selCountry.t;
   show(7);
+  /* hand off to the full thank-you page (estimate-in-inbox + book the audit call + async option) */
+  setTimeout(function(){location.href="thanks.html?t="+selCountry.t},2200);
   var r=range(),lead=baseLead();
   lead.lead_stage="completed";
   lead.business=(document.getElementById("f-biz").value||"").trim();
@@ -692,6 +688,13 @@ chips(".chips-time",TIMES,function(i){
 });
 /* full back-navigation: every screen after the contact step, picks preserved */
 document.querySelectorAll("#convo .backl").forEach(function(b){b.addEventListener("click",function(){show(Math.max(0,cur-1))})});
+
+/* PREVIEW SHORTCUT (internal): ?step=N jumps straight to any form step for design review.
+   Never posts anything (posts only fire from the real handlers). ?step=7 shows the done screen. */
+(function(){
+  var pv=new URLSearchParams(location.search).get("step");
+  if(pv!==null&&pv!==""){var n=Math.min(7,Math.max(0,parseInt(pv,10)||0));show(n)}
+})();
 
 /* ================= BOTTOM CTA -> smooth glide up to the form + glow pulse + focus ================= */
 document.getElementById("jumpEstimate").addEventListener("click",function(e){
