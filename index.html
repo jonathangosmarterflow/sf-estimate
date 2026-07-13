@@ -720,7 +720,7 @@ var net=(function(){
   var ctx=c.getContext("2d"),dpr=Math.min(devicePixelRatio,2);
   var ps=[],raf=null,mx=-1,my=-1,active=0,inf=0;
   var level=0,target=0,pulse=0;             /* progressive-connection state */
-  var BASE=118,GROW=46;                     /* px reach: strong from step0 -> +GROW by step7 */
+  var BASE=118,GROW=72;                     /* px reach: strong from step0 -> +GROW by step7 (boosted 7/13: weave more visible) */
   function size(){var r=host.getBoundingClientRect();if(r.width<2)return;c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);seed()}
   function node(x,y){var a=Math.random()*6.283,v=.12+Math.random()*.22;
     return{x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:(1.1+Math.random()*1.2),hue:Math.random()}}
@@ -734,11 +734,11 @@ var net=(function(){
     mx=(e.clientX-r.left)*(c.width/r.width);my=(e.clientY-r.top)*(c.height/r.height);active=1});
   hero.addEventListener("pointerleave",function(){active=0});
   function frame(){
-    level+=(target-level)*.025;             /* ease toward the form's progress */
-    pulse*=.955;                            /* soft one-time weave pulse per step */
+    level+=(target-level)*.06;              /* ease toward the form's progress (faster so the step-change is felt within ~1s) */
+    pulse*=.965;                            /* one-time weave pulse per step (slower decay = visible moment) */
     inf+=(active-inf)*.08;
-    var reach=(BASE+level*GROW+pulse*30)*dpr,R2=reach*reach;
-    var lineA=.155+level*.10;               /* clearly woven at rest; a touch more present as steps complete */
+    var reach=(BASE+level*GROW+pulse*44)*dpr,R2=reach*reach;
+    var lineA=.155+level*.16+pulse*.06;     /* woven at rest; noticeably tighter as steps complete */
     ctx.clearRect(0,0,c.width,c.height);
     for(var i=0;i<ps.length;i++){
       var p=ps[i];
