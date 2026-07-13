@@ -264,6 +264,10 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
             <div class="screen s4">
               <div class="q">What do you need? Pick all that apply.</div>
               <div class="chips grid2 chips-needs"></div>
+              <div id="needother" style="display:none">
+                <label for="f-need-other">Tell us what you need</label>
+                <input id="f-need-other" placeholder="e.g. Membership site with gated courses">
+              </div>
               <button class="cbtn" id="goNeeds">Continue &#8594;</button>
               <div class="err" id="err4">Pick at least one, or choose &#8220;Not sure yet&#8221;.</div>
               <button class="backl">&#8592; back</button>
@@ -274,10 +278,18 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <div class="chips chips-account"></div>
               <button class="backl">&#8592; back</button>
             </div>
-            <!-- STEP 6: timeline -->
+            <!-- STEP 6: timeline (+ optional detail dump) -->
             <div class="screen s6">
               <div class="q">When do you want it live?</div>
+              <label for="f-details" style="margin-top:0">Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span></label>
+              <textarea id="f-details" maxlength="6000" rows="3" placeholder="Current tools, pages you need, examples you like, deadlines, anything..." style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:inherit;resize:vertical;margin-bottom:10px"></textarea>
               <div class="chips chips-time"></div>
+              <div id="datepick" style="display:none">
+                <label for="f-launchdate">Your launch date</label>
+                <input id="f-launchdate" type="date">
+                <button class="cbtn" id="goDate">Lock my date &#8594;</button>
+                <div class="err" id="errdate">Please pick your launch date.</div>
+              </div>
               <button class="backl">&#8592; back</button>
             </div>
             <!-- STEP 7: done -->
@@ -480,7 +492,7 @@ var ACCOUNTS=[
   {label:"No account yet",d:[5,7]}
 ];
 /* ===EST-TABLE-END=== */
-var TIMES=[{label:"ASAP"},{label:"2-4 weeks"},{label:"Flexible"}];
+var TIMES=[{label:"ASAP"},{label:"Within 2 weeks"},{label:"2 to 4 weeks"},{label:"1 to 2 months"},{label:"Flexible / not sure"},{label:"I have a specific launch date",date:true}];
 var INDUSTRIES=[{label:"Agency / Marketing"},{label:"Real Estate"},{label:"Home & Trade Services"},{label:"Health / Wellness / Med Spa"},{label:"Fitness & Gyms"},{label:"Coaching / Consulting"},{label:"E-commerce / Retail"},{label:"Professional Services"},{label:"Automotive"},{label:"Education / Courses"},{label:"SaaS / Tech"},{label:"Other",other:true}];
 var TEAMS=[{label:"Just me"},{label:"2-10"},{label:"11-50"},{label:"51-200"},{label:"200+"}];
 /* Multi-select needs. Hour ranges pull from the engine's learned SCOPES table above wherever a
@@ -496,7 +508,8 @@ var NEEDS=[
   {label:"Integrations & API connections",key:"integr",lo:4,hi:10},
   {label:"Fix or troubleshoot an issue",key:"fix"},
   {label:"Migrate me into HighLevel",key:"migrate"},
-  {label:"Not sure yet, I need guidance",key:"unsure",exclusive:true}
+  {label:"Not sure yet, I need guidance",key:"unsure",exclusive:true},
+  {label:"Something else, I&#39;ll specify",key:"other"}
 ];
 function needHours(n){
   switch(n.key){
@@ -506,6 +519,7 @@ function needHours(n){
     case "migrate":return[SCOPES[2].lo,SCOPES[2].hi];
     case "fix":return[SCOPES[3].lo,SCOPES[3].hi];
     case "unsure":return[SCOPES[4].lo,SCOPES[4].hi];
+    case "other":return[SCOPES[4].lo,SCOPES[4].hi]; /* custom item: price like not-sure until refined */
     default:return[n.lo,n.hi];
   }
 }
@@ -651,6 +665,8 @@ chips(".chips-needs",NEEDS,function(i,btn){
     if(k>-1)state.needs.splice(k,1);else state.needs.push(i);
   }
   document.getElementById("err4").style.display="none";
+  var otherIdx=NEEDS.findIndex(function(n){return n.key==="other"});
+  document.getElementById("needother").style.display=state.needs.indexOf(otherIdx)>-1?"block":"none";
 },true);
 document.getElementById("goNeeds").addEventListener("click",function(){
   if(!state.needs.length){document.getElementById("err4").style.display="block";return}
@@ -660,14 +676,14 @@ document.getElementById("goNeeds").addEventListener("click",function(){
 /* step 5: account */
 chips(".chips-account",ACCOUNTS,function(i){state.account=i;updateEstimate(76,"Almost there&hellip; your estimate is taking shape.");show(6)});
 /* step 6: timeline -> done (estimate computed for the email/CRM only, never shown on-page) */
-chips(".chips-time",TIMES,function(i){
-  state.time=i;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
+function finishForm(timelineLabel){
+  state.timelineLabel=timelineLabel;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
   var dbtn=document.getElementById("dbtn"),dsub=document.getElementById("dsub");
   dsub.textContent="Taking you to your next step…";
-  dbtn.style.display="inline-block";dbtn.textContent="See your next step →";dbtn.href="thanks.html?t="+selCountry.t;
+  dbtn.style.display="none"; /* no button = no should-I-click confusion; pure fast redirect */
   show(7);
-  /* hand off to the full thank-you page (estimate-in-inbox + book the audit call + async option) */
-  setTimeout(function(){location.href="thanks.html?t="+selCountry.t},2200);
+  /* fast seamless hand-off to the full thank-you page */
+  setTimeout(function(){location.href="thanks.html?t="+selCountry.t},900);
   var r=range(),lead=baseLead();
   lead.lead_stage="completed";
   lead.business=(document.getElementById("f-biz").value||"").trim();
@@ -676,17 +692,32 @@ chips(".chips-time",TIMES,function(i){
   lead.business_website=w||"(none)";
   lead.industry=state.industry||"";
   lead.team_size=TEAMS[state.team]?TEAMS[state.team].label:"";
-  var needsTxt=state.needs.map(function(j){return NEEDS[j].label}).join("; ");
+  var needsTxt=state.needs.map(function(j){
+    if(NEEDS[j].key==="other"){var t=(document.getElementById("f-need-other").value||"").trim();return t?("Other: "+t):"Other (unspecified)"}
+    return NEEDS[j].label}).join("; ");
   lead.needs=needsTxt;
   lead.project_scope=needsTxt; /* keeps the existing HL note/field mapping working */
   lead.account_state=ACCOUNTS[state.account].label;
-  lead.timeline=TIMES[state.time].label;
+  lead.timeline=state.timelineLabel||"";
+  lead.project_details=(document.getElementById("f-details").value||"").trim().slice(0,6000);
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
+  window.__leadPayload=lead; /* carried into the worker ping below (bypasses HL note-mapping for new fields) */
   post(lead);
   /* instant-estimate trigger: nudge the 24/7 worker ~8s after the webhook lands in HL,
      so the estimate email goes out in seconds instead of on the next minute tick */
-  setTimeout(function(){try{fetch("https://hook.gosmarterflow.com/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0"}),keepalive:true})}catch(e){}},8000);
+  setTimeout(function(){try{fetch("https://hook.gosmarterflow.com/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0",lead:window.__leadPayload||null}),keepalive:true})}catch(e){}},8000);
+}
+chips(".chips-time",TIMES,function(i){
+  if(TIMES[i].date){document.getElementById("datepick").style.display="block";try{document.getElementById("f-launchdate").focus()}catch(_){}return}
+  document.getElementById("datepick").style.display="none";
+  finishForm(TIMES[i].label);
+});
+document.getElementById("goDate").addEventListener("click",function(){
+  var d=document.getElementById("f-launchdate").value;
+  if(!d){document.getElementById("errdate").style.display="block";return}
+  document.getElementById("errdate").style.display="none";
+  finishForm("Specific launch date: "+d);
 });
 /* full back-navigation: every screen after the contact step, picks preserved */
 document.querySelectorAll("#convo .backl").forEach(function(b){b.addEventListener("click",function(){show(Math.max(0,cur-1))})});
