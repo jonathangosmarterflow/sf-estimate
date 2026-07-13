@@ -726,7 +726,7 @@ var net=(function(){
   var BASE=118,GROW=72;                     /* px reach: strong from step0 -> +GROW by step7 (boosted 7/13: weave more visible) */
   function size(){var r=host.getBoundingClientRect();if(r.width<2)return;c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);seed()}
   function node(x,y){var a=Math.random()*6.283,v=.12+Math.random()*.22;
-    return{x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:(1.1+Math.random()*1.2),hue:Math.random()}}
+    return{x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:(1.7+Math.random()*1.5),hue:Math.random()}} /* bigger nodes per Jonathan 7/13 (match gallery) */
   function seed(){
     var want=Math.max(72,Math.min(160,Math.round((c.width*c.height)/(dpr*dpr*132*132))));
     while(ps.length<want)ps.push(node(Math.random()*c.width,Math.random()*c.height));

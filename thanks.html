@@ -74,7 +74,7 @@ main{position:relative;z-index:1}
     <div class="heroT">
       <svg class="check" viewBox="0 0 60 60"><circle cx="30" cy="30" r="26"/><path d="M19 31l8 8 15-17"/></svg>
       <h1>Your personalized estimate is <em>on its way</em>.</h1>
-      <p>It lands in your inbox within <span class="mins">a few minutes</span>, hours, price range, and how we'd approach your project. Reply to that email any time and our AI refines your estimate on the spot. Check spam if you don't see it.</p>
+      <p>It lands in your inbox within <span class="mins">a few minutes</span>, hours, price range, and how we'd approach your project. It comes directly from <span class="mins">jonathan@gosmarterflow.com</span>, our founder, so keep an eye out for that name (and check spam if you don't see it). Reply to that email any time and your estimate gets refined on the spot.</p>
     </div>
 
     <!-- PRIMARY: book the audit call (hidden for tier 4 via ?t=4) -->
@@ -128,7 +128,7 @@ main{position:relative;z-index:1}
   var ctx=c.getContext("2d"),dpr=Math.min(devicePixelRatio,2),ps=[];
   function size(){c.width=innerWidth*dpr;c.height=innerHeight*dpr;seed()}
   function node(){var a=Math.random()*6.283,v=.1+Math.random()*.18;
-    return{x:Math.random()*c.width,y:Math.random()*c.height,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1.1+Math.random()*1.1,hue:Math.random()}}
+    return{x:Math.random()*c.width,y:Math.random()*c.height,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1.7+Math.random()*1.4,hue:Math.random()}}
   function seed(){var want=Math.max(60,Math.min(130,Math.round((c.width*c.height)/(dpr*dpr*150*150))));
     while(ps.length<want)ps.push(node());if(ps.length>want)ps.length=want}
   size();addEventListener("resize",size);
