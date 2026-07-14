@@ -29,8 +29,13 @@ a{color:var(--vio)}
 
 /* ===== HERO ===== */
 .hero{position:relative;overflow:hidden;min-height:100vh;padding:0 0 64px;display:flex;flex-direction:column}
+/* STILL background (Jonathan + team 7/14: no motion, nothing competing with the form) —
+   two soft static gradient glows over the base --ground wash. Zero animation. */
 .bgfx{position:absolute;inset:0;pointer-events:none;z-index:0}
-.bgfx canvas{width:100%;height:100%;display:block}
+.bgfx::before{content:"";position:absolute;width:920px;height:920px;right:-260px;top:-320px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.10) 0%,rgba(79,70,229,.05) 45%,rgba(255,255,255,0) 70%)}
+.bgfx::after{content:"";position:absolute;width:760px;height:760px;left:-300px;bottom:-340px;border-radius:50%;
+  background:radial-gradient(circle,rgba(219,39,119,.06) 0%,rgba(124,58,237,.04) 45%,rgba(255,255,255,0) 70%)}
 .hwrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;width:100%;padding:0 28px}
 .hhead{display:flex;align-items:center;justify-content:space-between;padding:22px 0;gap:14px}
 .wordmark{font-family:var(--head);font-weight:800;font-size:22px;letter-spacing:-.03em;color:var(--ink)}
@@ -300,7 +305,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
                 <svg viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="26" stroke-width="3.5"/><path d="M19 31l8 8 15-17" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <div class="dtitle">Thank you! Your estimate is on its way</div>
                 <div class="dsub" id="dsub">We just sent your personalized estimate, hours and price, to your inbox from Jonathan at gosmarterflow.com. Check spam if you don&#39;t see it.</div>
-                <a class="dbtn" id="dbtn" href="https://link.gosmarterflow.com/widget/bookings/audit30m">Book your free audit call &rarr;</a>
+                <a class="dbtn" id="dbtn" href="https://link.gosmarterflow.com/widget/bookings/audit30m">Book your free consulting call &rarr;</a>
               </div>
             </div>
           </div>
@@ -331,7 +336,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
     <h2 class="sec">Three steps, mostly hands-off</h2>
     <div class="steps">
       <div class="step"><div class="n">1</div><h3>Get your instant estimate</h3><p>Answer a few quick questions and your real range, hours and price, lands in your inbox in minutes. No sales call required to get your number.</p></div>
-      <div class="step"><div class="n">2</div><h3>Free audit call</h3><p>When you&#39;re ready, we plug into your account live, run an AI-powered audit, and lock the exact plan together. Still no obligation.</p></div>
+      <div class="step"><div class="n">2</div><h3>Free consulting call</h3><p>When you&#39;re ready, we walk through your project and lock the exact plan together. Already on HighLevel? We plug in live and run an AI-powered audit too. Still no obligation.</p></div>
       <div class="step"><div class="n">3</div><h3>We build it</h3><p>We build it right, keep you updated on your schedule, and you never have to chase us for status.</p></div>
     </div>
    </div>
@@ -372,7 +377,7 @@ var HL_WEBHOOK_URL="https://services.leadconnectorhq.com/hooks/8cbLPOBT7W64ad5G2
 var RATE=55;
 var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function qs(){try{return new URLSearchParams(location.search).get("source")||""}catch(e){return""}}
-var LEAD_SOURCE=qs()||"Landing page (Constellation Electric)";
+var LEAD_SOURCE=qs()||"Landing page (Electric Light Still)";
 
 /* ================= COUNTRY / TIER DATA (tier 1=core .. 4=pass) ================= */
 /* tier drives back-end routing; front-end stays capture-first for everyone */
@@ -536,7 +541,7 @@ function show(i){
   screens.forEach(function(sc,j){sc.classList.toggle("on",j===i)});
   snum.textContent=Math.min(i+1,7);
   bar.style.width=stepPct[i]+"%";
-  if(i>=1&&i>lastShown){net.weave(i)} /* constellation connects more with every answered step (replaces confetti) */
+  /* still design 7/14: no background reaction on step advance (the .convo card pulse is feedback enough) */
   lastShown=Math.max(lastShown,i);cur=i;
 }
 function chips(sel,items,onpick,multi){
@@ -743,80 +748,9 @@ document.getElementById("jumpEstimate").addEventListener("click",function(e){
   },reduced?0:540);
 });
 
-/* ================= CONSTELLATION WEAVE (Electric) =================
-   THE FIELD: slow-drifting nodes, clearly connected from the first second
-   (strong baseline, like the gallery hero). THE WEAVE: net.weave(step) — fired
-   on each form-step advance (replaced the confetti) — tightens the network a
-   notch, so "the more we learn about your project, the more the dots connect."
-   Subtle by design: clean, professional, never competing with the form. Near
-   the cursor links reach a little further. No click-spawn (deliberate: only
-   the LEAD's answers densify the network). Honors prefers-reduced-motion. */
-var net=(function(){
-  if(reduced)return{weave:function(){}};
-  var host=document.getElementById("bgfx"),hero=document.getElementById("hero");
-  var c=document.createElement("canvas");host.appendChild(c);
-  var ctx=c.getContext("2d"),dpr=Math.min(devicePixelRatio,2);
-  var ps=[],raf=null,mx=-1,my=-1,active=0,inf=0;
-  var level=0,target=0,pulse=0;             /* progressive-connection state */
-  var BASE=118,GROW=72;                     /* px reach: strong from step0 -> +GROW by step7 (boosted 7/13: weave more visible) */
-  function size(){var r=host.getBoundingClientRect();if(r.width<2)return;c.width=Math.floor(r.width*dpr);c.height=Math.floor(r.height*dpr);seed()}
-  function node(x,y){var a=Math.random()*6.283,v=.12+Math.random()*.22;
-    return{x:x,y:y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:(1.7+Math.random()*1.5),hue:Math.random()}} /* bigger nodes per Jonathan 7/13 (match gallery) */
-  function seed(){
-    var want=Math.max(72,Math.min(160,Math.round((c.width*c.height)/(dpr*dpr*132*132))));
-    while(ps.length<want)ps.push(node(Math.random()*c.width,Math.random()*c.height));
-    if(ps.length>want)ps.length=want;
-  }
-  size();addEventListener("resize",size);
-  hero.addEventListener("pointermove",function(e){var r=c.getBoundingClientRect();if(r.width<2)return;
-    mx=(e.clientX-r.left)*(c.width/r.width);my=(e.clientY-r.top)*(c.height/r.height);active=1});
-  hero.addEventListener("pointerleave",function(){active=0});
-  function frame(){
-    level+=(target-level)*.06;              /* ease toward the form's progress (faster so the step-change is felt within ~1s) */
-    pulse*=.965;                            /* one-time weave pulse per step (slower decay = visible moment) */
-    inf+=(active-inf)*.08;
-    var reach=(BASE+level*GROW+pulse*44)*dpr,R2=reach*reach;
-    var lineA=.155+level*.16+pulse*.06;     /* woven at rest; noticeably tighter as steps complete */
-    ctx.clearRect(0,0,c.width,c.height);
-    for(var i=0;i<ps.length;i++){
-      var p=ps[i];
-      p.x+=p.vx*dpr;p.y+=p.vy*dpr;
-      if(p.x<-8)p.x=c.width+8;if(p.x>c.width+8)p.x=-8;
-      if(p.y<-8)p.y=c.height+8;if(p.y>c.height+8)p.y=-8;
-    }
-    /* links */
-    ctx.lineWidth=1*dpr;
-    for(var a=0;a<ps.length;a++){
-      var pa=ps[a];
-      /* cursor bonus: nodes near the pointer connect a bit further */
-      var cb=1;
-      if(inf>.02&&mx>=0){var dxm=mx-pa.x,dym=my-pa.y,dm=dxm*dxm+dym*dym;
-        if(dm<(reach*2.1)*(reach*2.1))cb=1+.4*inf*(1-Math.sqrt(dm)/(reach*2.1))}
-      for(var b=a+1;b<ps.length;b++){
-        var pb=ps[b],dx=pa.x-pb.x,dy=pa.y-pb.y,d2=dx*dx+dy*dy;
-        var lim=R2*cb*cb;
-        if(d2<lim){
-          var d=Math.sqrt(d2),al=(1-d/(reach*cb))*lineA;
-          if(al>.008){
-            ctx.strokeStyle="rgba(124,58,237,"+al.toFixed(3)+")";
-            ctx.beginPath();ctx.moveTo(pa.x,pa.y);ctx.lineTo(pb.x,pb.y);ctx.stroke();
-          }
-        }
-      }
-    }
-    /* nodes: violet core, indigo support, a few pink sparks */
-    for(var n=0;n<ps.length;n++){
-      var p2=ps[n];
-      ctx.beginPath();ctx.arc(p2.x,p2.y,p2.r*dpr,0,7);
-      ctx.fillStyle=p2.hue<.14?"rgba(219,39,119,.45)":(p2.hue<.6?"rgba(124,58,237,.5)":"rgba(79,70,229,.5)");
-      ctx.fill();
-    }
-    raf=requestAnimationFrame(frame);
-  }
-  raf=requestAnimationFrame(frame);
-  /* weave(step): the form learned more -> the constellation connects more (subtle) */
-  return{weave:function(step){target=Math.min(1,step/7);pulse=1}};
-})();
+/* ================= STILL BACKGROUND (7/14) =================
+   Team + Jonathan: the moving constellation pulled eyes off the form. The background is
+   now pure static CSS (see .bgfx::before/::after) — no canvas, no rAF loop, no JS at all. */
 </script>
 </body>
 </html>
