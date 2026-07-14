@@ -616,6 +616,7 @@ document.getElementById("go1").addEventListener("click",function(){
   });
   document.getElementById("err0").style.display=ok?"none":"block";
   if(!ok)return;
+  window.__formStart=window.__formStart||Date.now(); /* speed-to-lead clock: first step completed */
   var lead=baseLead();lead.lead_stage="started";post(lead); /* capture the contact NOW, even if they abandon */
   updateEstimate(12);
   show(1);
@@ -709,6 +710,7 @@ function finishForm(timelineLabel){
   lead.project_details=(document.getElementById("f-details").value||"").trim().slice(0,6000);
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
+  lead.form_started_at=window.__formStart||""; /* journey telemetry: step-1 time; worker stamps completion */
   window.__leadPayload=lead; /* carried into the worker ping below (bypasses HL note-mapping for new fields) */
   post(lead);
   /* instant-estimate trigger: nudge the 24/7 worker ~8s after the webhook lands in HL,
