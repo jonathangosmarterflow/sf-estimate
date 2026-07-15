@@ -278,18 +278,19 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <div class="chips chips-account"></div>
               <button class="backl">&#8592; back</button>
             </div>
-            <!-- STEP 6: timeline (+ optional detail dump) -->
+            <!-- STEP 6: timeline (+ optional detail dump) — explicit submit, timeline never auto-submits (CJ feedback 7/14) -->
             <div class="screen s6">
               <div class="q">When do you want it live?</div>
-              <label for="f-details" style="margin-top:0">Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span></label>
-              <textarea id="f-details" maxlength="6000" rows="3" placeholder="Current tools, pages you need, examples you like, deadlines, anything..." style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:inherit;resize:vertical;margin-bottom:10px"></textarea>
               <div class="chips chips-time"></div>
               <div id="datepick" style="display:none">
                 <label for="f-launchdate">Your launch date</label>
                 <input id="f-launchdate" type="date">
-                <button class="cbtn" id="goDate">Lock my date &#8594;</button>
                 <div class="err" id="errdate">Please pick your launch date.</div>
               </div>
+              <label for="f-details" style="margin-top:14px">Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span></label>
+              <textarea id="f-details" maxlength="6000" rows="3" placeholder="Current tools, pages you need, examples you like, deadlines, anything..." style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:inherit;resize:vertical;margin-bottom:10px"></textarea>
+              <button class="cbtn" id="goFinish">Get my estimate &#8594;</button>
+              <div class="err" id="errtime">Please pick a timeline above.</div>
               <button class="backl">&#8592; back</button>
             </div>
             <!-- STEP 7: done -->
@@ -710,16 +711,23 @@ function finishForm(timelineLabel){
      so the estimate email goes out in seconds instead of on the next minute tick */
   setTimeout(function(){try{fetch("https://hook.gosmarterflow.com/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0",lead:window.__leadPayload||null}),keepalive:true})}catch(e){}},8000);
 }
+/* timeline chips only RECORD the choice — submit is always the explicit button (never lose the detail field, CJ 7/14) */
 chips(".chips-time",TIMES,function(i){
-  if(TIMES[i].date){document.getElementById("datepick").style.display="block";try{document.getElementById("f-launchdate").focus()}catch(_){}return}
-  document.getElementById("datepick").style.display="none";
-  finishForm(TIMES[i].label);
+  state.time=i;
+  document.getElementById("errtime").style.display="none";
+  document.getElementById("datepick").style.display=TIMES[i].date?"block":"none";
+  if(TIMES[i].date){try{document.getElementById("f-launchdate").focus()}catch(_){}}
 });
-document.getElementById("goDate").addEventListener("click",function(){
-  var d=document.getElementById("f-launchdate").value;
-  if(!d){document.getElementById("errdate").style.display="block";return}
-  document.getElementById("errdate").style.display="none";
-  finishForm("Specific launch date: "+d);
+document.getElementById("goFinish").addEventListener("click",function(){
+  if(state.time===null||state.time===undefined){document.getElementById("errtime").style.display="block";return}
+  if(TIMES[state.time].date){
+    var d=document.getElementById("f-launchdate").value;
+    if(!d){document.getElementById("errdate").style.display="block";return}
+    document.getElementById("errdate").style.display="none";
+    finishForm("Specific launch date: "+d);
+    return;
+  }
+  finishForm(TIMES[state.time].label);
 });
 /* full back-navigation: every screen after the contact step, picks preserved */
 document.querySelectorAll("#convo .backl").forEach(function(b){b.addEventListener("click",function(){show(Math.max(0,cur-1))})});
