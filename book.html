@@ -28,7 +28,10 @@ h1,h2,h3{font-family:var(--head);font-weight:800;letter-spacing:-.025em;margin:0
 a{color:var(--vio)}
 .wrap{max-width:900px;margin:0 auto;padding:0 24px}
 .bgfx{position:fixed;inset:0;pointer-events:none;z-index:0}
-.bgfx canvas{width:100%;height:100%;display:block}
+.bgfx::before{content:"";position:fixed;width:920px;height:920px;right:-260px;top:-320px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,58,237,.10) 0%,rgba(79,70,229,.05) 45%,rgba(255,255,255,0) 70%)}
+.bgfx::after{content:"";position:fixed;width:760px;height:760px;left:-300px;bottom:-340px;border-radius:50%;
+  background:radial-gradient(circle,rgba(219,39,119,.06) 0%,rgba(124,58,237,.04) 45%,rgba(255,255,255,0) 70%)}
 main{position:relative;z-index:1}
 
 .hhead{display:flex;align-items:center;justify-content:center;padding:26px 0 8px}
@@ -93,13 +96,13 @@ main{position:relative;z-index:1}
     <div class="card async" id="asynccard">
       <div class="kick">Call-free option</div>
       <h2>Get your audit without a call</h2>
-      <p class="sub">Same AI-powered audit, fully asynchronous. You share read-only access, we send your findings report, fix-list, and plan by email within one business day.</p>
+      <p class="sub">Same AI-powered audit, fully asynchronous. You share access, we send your findings report, fix-list, and plan by email within one business day.</p>
       <div class="steps">
-        <div class="st"><div class="n">1</div><h3>Share your account</h3><p>In HighLevel: create a snapshot share link of your sub-account, or invite support@gosmarterflow.com as a user. Read-only, we never touch your settings or campaigns.</p></div>
+        <div class="st"><div class="n">1</div><h3>Share your account</h3><p>In HighLevel: create a snapshot share link of your sub-account, or add support@gosmarterflow.com as a user. We only look, we never change anything, and you can remove us right after.</p></div>
         <div class="st"><div class="n">2</div><h3>Reply to your estimate email</h3><p>Paste the snapshot link (or say you've added us) in a reply to the estimate email you just received. That's it.</p></div>
         <div class="st"><div class="n">3</div><h3>Get your full audit</h3><p>Findings across 10 categories, your top quick wins, and a prioritized plan mapped to your estimate, in your inbox within one business day.</p></div>
       </div>
-      <p class="fineline">Prefer an NDA first? Just say the word in your reply, ours is pre-signed and comes right over. We remove our access after the audit, always.</p>
+      <p class="fineline" style="margin-top:22px">Prefer an NDA first? Just say the word in your reply, ours is pre-signed and comes right over. We remove our access after the audit, always.</p>
     </div>
   </div>
 
@@ -123,35 +126,20 @@ main{position:relative;z-index:1}
   }
 })();
 
-/* Constellation field (ambient, fully woven — the journey completed) */
+
+/* prefill the booking widget from the estimate form (n/e/p URL params ride from index -> here) */
 (function(){
-  if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;
-  var host=document.getElementById("bgfx");
-  var c=document.createElement("canvas");host.appendChild(c);
-  var ctx=c.getContext("2d"),dpr=Math.min(devicePixelRatio,2),ps=[];
-  function size(){c.width=innerWidth*dpr;c.height=innerHeight*dpr;seed()}
-  function node(){var a=Math.random()*6.283,v=.1+Math.random()*.18;
-    return{x:Math.random()*c.width,y:Math.random()*c.height,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1.7+Math.random()*1.4,hue:Math.random()}}
-  function seed(){var want=Math.max(60,Math.min(130,Math.round((c.width*c.height)/(dpr*dpr*150*150))));
-    while(ps.length<want)ps.push(node());if(ps.length>want)ps.length=want}
-  size();addEventListener("resize",size);
-  var reach=165*dpr;
-  function frame(){
-    ctx.clearRect(0,0,c.width,c.height);ctx.lineWidth=1*dpr;
-    for(var i=0;i<ps.length;i++){var p=ps[i];p.x+=p.vx*dpr;p.y+=p.vy*dpr;
-      if(p.x<-8)p.x=c.width+8;if(p.x>c.width+8)p.x=-8;
-      if(p.y<-8)p.y=c.height+8;if(p.y>c.height+8)p.y=-8}
-    for(var a=0;a<ps.length;a++){for(var b=a+1;b<ps.length;b++){
-      var dx=ps[a].x-ps[b].x,dy=ps[a].y-ps[b].y,d2=dx*dx+dy*dy;
-      if(d2<reach*reach){var al=(1-Math.sqrt(d2)/reach)*.14;
-        ctx.strokeStyle="rgba(124,58,237,"+al.toFixed(3)+")";
-        ctx.beginPath();ctx.moveTo(ps[a].x,ps[a].y);ctx.lineTo(ps[b].x,ps[b].y);ctx.stroke()}}}
-    for(var n=0;n<ps.length;n++){var p2=ps[n];
-      ctx.beginPath();ctx.arc(p2.x,p2.y,p2.r*dpr,0,7);
-      ctx.fillStyle=p2.hue<.14?"rgba(219,39,119,.4)":(p2.hue<.6?"rgba(124,58,237,.45)":"rgba(79,70,229,.45)");
-      ctx.fill()}
-    requestAnimationFrame(frame)}
-  requestAnimationFrame(frame);
+  var q=new URLSearchParams(location.search);
+  var name=(q.get("n")||"").trim(),email=(q.get("e")||"").trim(),phone=(q.get("p")||"").trim();
+  if(!name&&!email&&!phone)return;
+  var f=document.getElementById("audit30m_iframe");if(!f)return;
+  var parts=name.split(/\s+/),u=new URL(f.src);
+  if(parts[0])u.searchParams.set("first_name",parts[0]);
+  if(parts.length>1)u.searchParams.set("last_name",parts.slice(1).join(" "));
+  if(name)u.searchParams.set("full_name",name);
+  if(email)u.searchParams.set("email",email);
+  if(phone)u.searchParams.set("phone",phone);
+  f.src=u.toString();
 })();
 </script>
 </body>

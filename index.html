@@ -695,7 +695,13 @@ function finishForm(timelineLabel){
   dbtn.style.display="none"; /* no button = no should-I-click confusion; pure fast redirect */
   show(7);
   /* fast seamless hand-off to the full thank-you page */
-  setTimeout(function(){location.href="thanks.html?t="+selCountry.t},900);
+  setTimeout(function(){
+    /* carry contact data to the thanks page so the booking widget prefills (never make a lead retype) */
+    var pf="&n="+encodeURIComponent((document.getElementById("f-name").value||"").trim())
+          +"&e="+encodeURIComponent((document.getElementById("f-email").value||"").trim())
+          +"&p="+encodeURIComponent((document.getElementById("f-phone").value||"").trim());
+    location.href="thanks.html?t="+selCountry.t+pf;
+  },900);
   var r=range(),lead=baseLead();
   lead.lead_stage="completed";
   lead.business=(document.getElementById("f-biz").value||"").trim();
