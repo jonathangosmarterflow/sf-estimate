@@ -238,7 +238,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
                 <div class="cc-list" id="cc-list"></div>
               </div>
               <button class="cbtn go1" id="go1">Start my estimate</button>
-              <div class="err" id="err0">Please add your name, a valid email, and your phone number.</div>
+              <div class="err" id="err0">Please add a valid email so we can send your estimate.</div>
               <div class="fine">Free. No sales call. Takes about 60 seconds.</div>
             </div>
             <!-- STEP 1: business -->
@@ -635,13 +635,20 @@ function post(payload){
 /* ================= STEP HANDLERS ================= */
 document.getElementById("go1").addEventListener("click",function(){
   var name=document.getElementById("f-name"),email=document.getElementById("f-email"),phone=document.getElementById("f-phone");
-  var ok=true;
-  [name,email,phone].forEach(function(f){
-    var bad=!f.value.trim()||(f.type==="email"&&!/.+@.+\..+/.test(f.value));
-    f.style.borderColor=bad?"#ff7a7a":"";if(bad)ok=false;
-  });
-  document.getElementById("err0").style.display=ok?"none":"block";
-  if(!ok)return;
+  var err0=document.getElementById("err0");
+  /* email is REQUIRED and must be valid — it's where the estimate goes, so it always gates */
+  var emailBad=!email.value.trim()||!/.+@.+\..+/.test(email.value);
+  email.style.borderColor=emailBad?"#ff7a7a":"";
+  if(emailBad){err0.textContent="Please add a valid email so we can send your estimate.";err0.style.display="block";return}
+  /* name + phone help us tailor things but are skippable: one soft nudge, then let them through */
+  if((!name.value.trim()||!phone.value.trim())&&!window.__s0soft){
+    window.__s0soft=true;
+    name.style.borderColor=name.value.trim()?"":"#ffd08a";
+    phone.style.borderColor=phone.value.trim()?"":"#ffd08a";
+    err0.textContent="Your name and phone help us tailor your estimate. Tap again to continue anyway.";
+    err0.style.display="block";return;
+  }
+  name.style.borderColor="";phone.style.borderColor="";err0.style.display="none";
   window.__formStart=window.__formStart||Date.now(); /* speed-to-lead clock: first step completed */
   var lead=baseLead();lead.lead_stage="started";post(lead); /* capture the contact NOW, even if they abandon */
   updateEstimate(12);
@@ -703,14 +710,37 @@ chips(".chips-needs",NEEDS,function(i,btn){
   document.getElementById("needother").style.display=state.needs.indexOf(otherIdx)>-1?"block":"none";
 },true);
 document.getElementById("goNeeds").addEventListener("click",function(){
-  if(!state.needs.length){document.getElementById("err4").style.display="block";return}
+  if(!needsValid()){document.getElementById("err4").style.display="block";return}
   updateEstimate(58,"Calculating your range from real project data&hellip; the full breakdown (hours + price) goes to your inbox.");
   show(5);
 });
 /* step 5: account */
 chips(".chips-account",ACCOUNTS,function(i){state.account=i;updateEstimate(76,"Almost there&hellip; your estimate is taking shape.");show(6)});
 /* step 6: timeline -> done (estimate computed for the email/CRM only, never shown on-page) */
+/* needs is one of the three HARD-required answers. Valid = at least one real pick; an "Other"
+   chip with empty or still-placeholder text does NOT count (blocks the blank-needs bug). */
+function needsValid(){
+  if(!state.needs||!state.needs.length)return false;
+  var o=document.getElementById("f-need-other");
+  return state.needs.some(function(j){
+    if(NEEDS[j].key==="other"){
+      var t=(o.value||"").trim();
+      return t.length>0&&t.toLowerCase()!==((o.getAttribute("placeholder")||"").trim().toLowerCase());
+    }
+    return true; /* any real chip (including "Not sure yet") is a valid answer */
+  });
+}
 function finishForm(timelineLabel){
+  /* HARD GUARD (belt + suspenders): submit can NEVER fire without the three essentials —
+     business name, a valid email, and a real project need. Route back to the first missing step. */
+  var bizEl=document.getElementById("f-biz"),emailEl=document.getElementById("f-email");
+  var biz=(bizEl.value||"").trim(),email=(emailEl.value||"").trim(),emailOk=/.+@.+\..+/.test(email);
+  if(!emailOk||!biz||!needsValid()){
+    if(!emailOk){show(0);emailEl.style.borderColor="#ff7a7a";var e0=document.getElementById("err0");e0.textContent="Please add a valid email so we can send your estimate.";e0.style.display="block";}
+    else if(!biz){show(1);bizEl.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";}
+    else{show(4);document.getElementById("err4").style.display="block";}
+    return;
+  }
   state.timelineLabel=timelineLabel;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
   try{sfBeacon("submit")}catch(e){} /* form completed -> /event */
   var dbtn=document.getElementById("dbtn"),dsub=document.getElementById("dsub");
@@ -738,7 +768,7 @@ function finishForm(timelineLabel){
     return NEEDS[j].label}).join("; ");
   lead.needs=needsTxt;
   lead.project_scope=needsTxt; /* keeps the existing HL note/field mapping working */
-  lead.account_state=ACCOUNTS[state.account].label;
+  lead.account_state=(state.account!=null&&ACCOUNTS[state.account])?ACCOUNTS[state.account].label:"Not specified";
   lead.timeline=state.timelineLabel||"";
   lead.project_details=(document.getElementById("f-details").value||"").trim().slice(0,6000);
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
@@ -758,12 +788,18 @@ chips(".chips-time",TIMES,function(i){
   if(TIMES[i].date){try{document.getElementById("f-launchdate").focus()}catch(_){}}
 });
 document.getElementById("goFinish").addEventListener("click",function(){
-  if(state.time===null||state.time===undefined){document.getElementById("errtime").style.display="block";return}
+  /* timeline is helpful but skippable: one soft nudge, then allow submit without it (submit stays explicit, CJ 7/14) */
+  if(state.time===null||state.time===undefined){
+    if(!window.__timeSoft){window.__timeSoft=true;var et=document.getElementById("errtime");et.textContent="Pick a timeline for a sharper estimate, or tap again to skip.";et.style.display="block";return}
+    document.getElementById("errtime").style.display="none";
+    finishForm("Not specified");return;
+  }
+  document.getElementById("errtime").style.display="none";
   if(TIMES[state.time].date){
     var d=document.getElementById("f-launchdate").value;
-    if(!d){document.getElementById("errdate").style.display="block";return}
+    if(!d&&!window.__dateSoft){window.__dateSoft=true;document.getElementById("errdate").style.display="block";return}
     document.getElementById("errdate").style.display="none";
-    finishForm("Specific launch date: "+d);
+    finishForm(d?("Specific launch date: "+d):"Specific launch date (not set)");
     return;
   }
   finishForm(TIMES[state.time].label);
