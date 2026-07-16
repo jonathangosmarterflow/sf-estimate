@@ -383,6 +383,27 @@ var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function qs(){try{return new URLSearchParams(location.search).get("source")||""}catch(e){return""}}
 var LEAD_SOURCE=qs()||"Landing page (Electric Light Still)";
 
+/* ================= EVENT BEACONS (funnel telemetry -> /event worker) =================
+   Fire-and-forget page/journey pings. Every call is wrapped so ANY failure is silently
+   swallowed: the form is never affected if the endpoint is down (it may deploy after this
+   page). sendBeacon first, fetch keepalive fallback. */
+var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
+    SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
+function sfBeacon(ev,step,src){
+  try{
+    var p={t:SF_EVENT_TOKEN,e:ev};
+    if(step!=null)p.step=step;
+    if(src)p.src=src;
+    var body=JSON.stringify(p);
+    if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"application/json"}))}
+    else{fetch(SF_EVENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true})}
+  }catch(e){}
+}
+try{sfBeacon("view",null,qs())}catch(e){}
+/* form_start: first interaction with the form card (focus or input), fired once */
+(function(){var done=false;function fs(){if(done)return;done=true;try{sfBeacon("form_start")}catch(e){}}
+  try{var cv=document.getElementById("convo");if(cv){cv.addEventListener("focusin",fs);cv.addEventListener("input",fs)}}catch(e){}})();
+
 /* ================= COUNTRY / TIER DATA (tier 1=core .. 4=pass) ================= */
 /* tier drives back-end routing; front-end stays capture-first for everyone */
 var COUNTRIES=[
@@ -546,6 +567,7 @@ function show(i){
   snum.textContent=Math.min(i+1,7);
   bar.style.width=stepPct[i]+"%";
   /* still design 7/14: no background reaction on step advance (the .convo card pulse is feedback enough) */
+  if(i>lastShown){try{sfBeacon("step",i)}catch(e){}} /* forward step advance -> /event */
   lastShown=Math.max(lastShown,i);cur=i;
 }
 function chips(sel,items,onpick,multi){
@@ -690,6 +712,7 @@ chips(".chips-account",ACCOUNTS,function(i){state.account=i;updateEstimate(76,"A
 /* step 6: timeline -> done (estimate computed for the email/CRM only, never shown on-page) */
 function finishForm(timelineLabel){
   state.timelineLabel=timelineLabel;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
+  try{sfBeacon("submit")}catch(e){} /* form completed -> /event */
   var dbtn=document.getElementById("dbtn"),dsub=document.getElementById("dsub");
   dsub.textContent="Taking you to your next step…";
   dbtn.style.display="none"; /* no button = no should-I-click confusion; pure fast redirect */

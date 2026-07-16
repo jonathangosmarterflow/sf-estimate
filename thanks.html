@@ -149,6 +149,22 @@ main{position:relative;z-index:1}
 
 /* defensive: if the embedded calendar has not loaded (ad-blocker / iframe block), make the direct booking link prominent so no lead is stuck waiting for the estimate email */
 setTimeout(function(){try{if(!window.__calOK){var fb=document.getElementById("calfallback");if(fb)fb.classList.add("show")}}catch(e){}},6000);
+
+/* ================= EVENT BEACONS (funnel telemetry -> /event worker) =================
+   Fire-and-forget, every call swallowed so the page is never affected if the endpoint is
+   down (it may deploy after this page). */
+var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
+    SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
+function sfBeacon(ev){
+  try{
+    var body=JSON.stringify({t:SF_EVENT_TOKEN,e:ev});
+    if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"application/json"}))}
+    else{fetch(SF_EVENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true})}
+  }catch(e){}
+}
+try{sfBeacon("thanks_view")}catch(e){}
+/* book_click: lead uses the direct booking fallback link */
+(function(){try{var a=document.querySelector("#calfallback a");if(a)a.addEventListener("click",function(){try{sfBeacon("book_click")}catch(e){}})}catch(e){}})();
 </script>
 </body>
 </html>
