@@ -53,6 +53,9 @@ main{position:relative;z-index:1}
 .card h2{font-size:clamp(21px,2.6vw,27px);margin-bottom:8px}
 .card .sub{color:var(--muted);font-size:15px;margin:0 0 18px;max-width:640px}
 .calframe{width:100%;border:0;border-radius:14px;min-height:760px;background:#fff}
+.calfallback{text-align:center;margin:12px 0 2px;font-size:13.5px;color:var(--muted2)}
+.calfallback a{font-weight:700}
+.calfallback.show{color:var(--ink);font-weight:600;background:var(--bg-soft);border:1px solid var(--line);border-radius:11px;padding:11px 14px}
 
 .orrow{display:flex;align-items:center;gap:14px;margin:6px 0 0;color:var(--muted2);font-size:13px;font-weight:600}
 .orrow:before,.orrow:after{content:"";flex:1;height:1px;background:var(--line)}
@@ -88,7 +91,8 @@ main{position:relative;z-index:1}
       <div class="kick">Best next step</div>
       <h2>Lock in your free consulting call</h2>
       <p class="sub">30 minutes, shaped around what you need: consulting on your project, a live AI-powered audit of your account, or troubleshooting something specific. We lock the exact plan together. No obligation.</p>
-      <iframe class="calframe" src="https://link.gosmarterflow.com/widget/bookings/audit30m" id="audit30m_iframe" title="Book your free consulting call"></iframe>
+      <iframe class="calframe" src="https://link.gosmarterflow.com/widget/bookings/audit30m" id="audit30m_iframe" title="Book your free consulting call" onload="try{window.__calOK=1}catch(e){}"></iframe>
+      <p class="calfallback" id="calfallback">Calendar not loading? <a href="https://estimate.gosmarterflow.com/book.html">Book your call here</a> &rarr;</p>
     </div>
 
     <div class="orrow" id="orrow">prefer to skip the call?</div>
@@ -142,6 +146,9 @@ main{position:relative;z-index:1}
   if(phone)u.searchParams.set("phone",phone);
   f.src=u.toString();
 })();
+
+/* defensive: if the embedded calendar has not loaded (ad-blocker / iframe block), make the direct booking link prominent so no lead is stuck waiting for the estimate email */
+setTimeout(function(){try{if(!window.__calOK){var fb=document.getElementById("calfallback");if(fb)fb.classList.add("show")}}catch(e){}},6000);
 </script>
 </body>
 </html>
