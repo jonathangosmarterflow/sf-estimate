@@ -939,9 +939,15 @@ document.getElementById("jumpEstimate").addEventListener("click",function(e){
     try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}
   }
   function keyact(fn){return function(ev){if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();fn();}};}
+  /* SYMMETRIC intent metric: both cards fire the allowed "step" event with a string label,
+     rides the payload's existing `step` field (same as numeric step advances). Card B ALSO
+     keeps book_click for continuity with historical data. Fired on the CARD click only
+     (NOT inside revealEstimate, so the bottom #jumpEstimate CTA never inflates the choice metric). */
+  function pickEstimate(){try{if(window.sfBeacon)sfBeacon("step","cta_estimate");}catch(e){}revealEstimate();}
+  function pickBooking(){try{if(window.sfBeacon)sfBeacon("step","cta_call");}catch(e){}revealBooking();}
   var ca=el("sfCardA"),cb=el("sfCardB");
-  if(ca){ca.addEventListener("click",revealEstimate);ca.addEventListener("keydown",keyact(revealEstimate));}
-  if(cb){cb.addEventListener("click",revealBooking);cb.addEventListener("keydown",keyact(revealBooking));}
+  if(ca){ca.addEventListener("click",pickEstimate);ca.addEventListener("keydown",keyact(pickEstimate));}
+  if(cb){cb.addEventListener("click",pickBooking);cb.addEventListener("keydown",keyact(pickBooking));}
   var back=el("sfbBack");
   if(back)back.addEventListener("click",function(){hide("sfBook");hide("hero");var c=el("sfChoice");if(c)c.style.display="flex";try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}});
   /* Bottom "Get my free estimate" CTA (#jumpEstimate) must reveal the form first (capture phase),
