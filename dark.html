@@ -600,7 +600,7 @@ function range(){
     });
   }
   if(state.account!=null){lo+=ACCOUNTS[state.account].d[0];hi+=ACCOUNTS[state.account].d[1]}
-  lo=Math.max(4,Math.round(lo));hi=Math.max(lo+3,Math.round(hi));
+  lo=Math.max(2,Math.round(lo));hi=Math.max(lo+1,Math.round(hi));
   return[lo,hi];
 }
 function updateEstimate(acc,msg){
