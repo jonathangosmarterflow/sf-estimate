@@ -245,6 +245,11 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
                 <input class="cc-search" id="cc-search" placeholder="Search country or code&hellip;" autocomplete="off">
                 <div class="cc-list" id="cc-list"></div>
               </div>
+              <label style="margin-top:13px">Best way to reach you</label>
+              <div id="chan-toggle" style="display:flex;gap:8px">
+                <button type="button" class="chan-pill" data-ch="Email" aria-pressed="true" style="flex:1;font-family:inherit;font-size:14px;font-weight:600;padding:11px 12px;border-radius:12px;cursor:pointer;transition:.14s;border:1px solid var(--vio);background:#faf7ff;color:var(--vio)">Email</button>
+                <button type="button" class="chan-pill" data-ch="SMS" aria-pressed="false" style="flex:1;font-family:inherit;font-size:14px;font-weight:600;padding:11px 12px;border-radius:12px;cursor:pointer;transition:.14s;border:1px solid #e7e2f4;background:#fdfcff;color:var(--ink)">Text</button>
+              </div>
               <button class="cbtn go1" id="go1">Start my estimate</button>
               <div class="err" id="err0">Please add a valid email so we can send your estimate.</div>
               <div class="fine">Takes about 60 seconds. You&#8217;ll get your number first, and you can book a free call anytime after.</div>
@@ -415,6 +420,21 @@ var LEAD_SOURCE=qs()||"Landing page (Electric Light Still)";
     var q=new URLSearchParams(location.search),map={n:"f-name",e:"f-email",p:"f-phone"};
     for(var k in map){var v=q.get(k);if(v){var el=document.getElementById(map[k]);if(el&&!el.value)el.value=v;}}
   }catch(_){}
+})();
+
+/* CHANNEL PREFERENCE TOGGLE: lead picks Email (default) or Text -> feeds preferred_channel. */
+var PREF_CHANNEL="Email";
+(function(){
+  var pills=document.querySelectorAll("#chan-toggle .chan-pill");if(!pills.length)return;
+  function setch(v){
+    PREF_CHANNEL=v;
+    for(var i=0;i<pills.length;i++){var on=pills[i].getAttribute("data-ch")===v;
+      pills[i].setAttribute("aria-pressed",on?"true":"false");
+      pills[i].style.borderColor=on?"var(--vio)":"#e7e2f4";
+      pills[i].style.background=on?"#faf7ff":"#fdfcff";
+      pills[i].style.color=on?"var(--vio)":"var(--ink)";}
+  }
+  for(var i=0;i<pills.length;i++){pills[i].addEventListener("click",function(){setch(this.getAttribute("data-ch"))});}
 })();
 
 /* ================= EVENT BEACONS (funnel telemetry -> /event worker) =================
@@ -657,7 +677,7 @@ function baseLead(){
     email:(document.getElementById("f-email").value||"").trim(),
     phone:(selCountry.d+" "+localPhone).trim(),
     country:selCountry.n,country_code:selCountry.d,country_tier:selCountry.t,
-    preferred_channel:"Email",lead_source:LEAD_SOURCE,
+    preferred_channel:PREF_CHANNEL,lead_source:LEAD_SOURCE,
     estimate_version:EST_VERSION /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
   };
 }
