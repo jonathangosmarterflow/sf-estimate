@@ -453,6 +453,16 @@ var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function qs(){try{return new URLSearchParams(location.search).get("source")||""}catch(e){return""}}
 var LEAD_SOURCE=qs()||"Landing page (Electric Light Still)";
 
+/* POST-BOOKING PREFILL: if n/e/p arrive in the query (e.g. the post-booking intake link
+   ?source=post-booking&n=<name>&e=<email>&p=<phone>), pre-populate the contact inputs so the
+   lead confirms rather than retypes. Values only, no step-skip. No-op when the params are absent. */
+(function(){
+  try{
+    var q=new URLSearchParams(location.search),map={n:"f-name",e:"f-email",p:"f-phone"};
+    for(var k in map){var v=q.get(k);if(v){var el=document.getElementById(map[k]);if(el&&!el.value)el.value=v;}}
+  }catch(_){}
+})();
+
 /* ================= EVENT BEACONS (funnel telemetry -> /event worker) =================
    Fire-and-forget page/journey pings. Every call is wrapped so ANY failure is silently
    swallowed: the form is never affected if the endpoint is down (it may deploy after this
