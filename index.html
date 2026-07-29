@@ -209,6 +209,11 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
           <div class="pi"><b>#3</b><span>on the HighLevel Directory</span></div>
           <div class="pi"><b>60 sec</b><span>to request your estimate</span></div>
         </div>
+        <!-- TWO-OFFER CTA ROW (Jonathan 7/29): instant estimate OR book a free call right away -->
+        <div class="hctas" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:26px;align-items:center">
+          <a href="#hero" class="btn-lg" id="heroEstimate">Get my instant estimate &#8594;</a>
+          <a href="book.html" class="btn-lg" id="heroBook" style="background:transparent;border:2px solid #7c3aed;color:#7c3aed;box-shadow:none">Or book a free consulting call &#8594;</a>
+        </div>
       </div>
 
       <!-- CONVERSATIONAL FORM -->
@@ -242,6 +247,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <button class="cbtn go1" id="go1">Start my estimate</button>
               <div class="err" id="err0">Please add a valid email so we can send your estimate.</div>
               <div class="fine">Free. No sales call. Takes about 60 seconds.</div>
+              <div class="fine" style="margin-top:6px">Rather talk it through live? <a href="book.html" class="booklink" style="color:#7c3aed;font-weight:600">Book a free consulting call &#8594;</a></div>
             </div>
             <!-- STEP 1: business -->
             <div class="screen s1">
@@ -847,8 +853,8 @@ document.querySelectorAll(".xtoggle").forEach(function(b){b.addEventListener("cl
   if(pv!==null&&pv!==""){var n=Math.min(7,Math.max(0,parseInt(pv,10)||0));show(n)}
 })();
 
-/* ================= BOTTOM CTA -> smooth glide up to the form + glow pulse + focus ================= */
-document.getElementById("jumpEstimate").addEventListener("click",function(e){
+/* ================= CTAs -> smooth glide to the form + glow pulse + focus ================= */
+function glideToForm(e){
   e.preventDefault();
   window.scrollTo({top:0,behavior:reduced?"auto":"smooth"});
   var card=document.getElementById("convo");
@@ -857,7 +863,25 @@ document.getElementById("jumpEstimate").addEventListener("click",function(e){
     var n=document.getElementById("f-name");
     if(n&&!("ontouchstart"in window)){try{n.focus({preventScroll:true})}catch(_){n.focus()}}
   },reduced?0:540);
-});
+}
+document.getElementById("jumpEstimate").addEventListener("click",glideToForm);
+var heroEst=document.getElementById("heroEstimate");if(heroEst)heroEst.addEventListener("click",glideToForm);
+
+/* TWO-OFFER: book-a-call CTAs (hero + in-form). Fire the book_click beacon (src rides for
+   team-test exclusion), carry any already-typed contact fields so the booking widget prefills. */
+function goBook(e){
+  e.preventDefault();
+  try{sfBeacon("book_click",null,qs())}catch(_){}
+  var n=(document.getElementById("f-name").value||"").trim(),
+      em=(document.getElementById("f-email").value||"").trim(),
+      p=(document.getElementById("f-phone").value||"").trim();
+  var u="book.html?t="+selCountry.t
+       +"&n="+encodeURIComponent(n)+"&e="+encodeURIComponent(em)+"&p="+encodeURIComponent(p);
+  var s=qs();if(s)u+="&source="+encodeURIComponent(s);
+  location.href=u;
+}
+var hb=document.getElementById("heroBook");if(hb)hb.addEventListener("click",goBook);
+document.querySelectorAll(".booklink").forEach(function(a){a.addEventListener("click",goBook)});
 
 /* ================= STILL BACKGROUND (7/14) =================
    Team + Jonathan: the moving constellation pulled eyes off the form. The background is
