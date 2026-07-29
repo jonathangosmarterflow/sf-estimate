@@ -209,10 +209,10 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
           <div class="pi"><b>#3</b><span>on the HighLevel Directory</span></div>
           <div class="pi"><b>60 sec</b><span>to request your estimate</span></div>
         </div>
-        <!-- TWO-OFFER CTA ROW (Jonathan 7/29): instant estimate OR book a free call right away -->
-        <div class="hctas" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:26px;align-items:center">
-          <a href="#hero" class="btn-lg" id="heroEstimate">Get my instant estimate &#8594;</a>
-          <a href="book.html" class="btn-lg" id="heroBook" style="background:transparent;border:2px solid #7c3aed;color:#7c3aed;box-shadow:none">Or book a free consulting call &#8594;</a>
+        <!-- TWO-OFFER CTA (Jonathan 7/29, refined same day: estimate CTA lives in the form card only —
+             one hero button = the call path, styled as a real button, never a bare link) -->
+        <div class="hctas" style="margin-top:26px">
+          <a href="book.html" id="heroBook" style="display:inline-block;padding:14px 24px;border-radius:12px;border:2px solid #7c3aed;color:#7c3aed;font-weight:700;font-size:16px;text-decoration:none;font-family:inherit">Book a free consulting call &#8594;</a>
         </div>
       </div>
 
@@ -865,7 +865,6 @@ function glideToForm(e){
   },reduced?0:540);
 }
 document.getElementById("jumpEstimate").addEventListener("click",glideToForm);
-var heroEst=document.getElementById("heroEstimate");if(heroEst)heroEst.addEventListener("click",glideToForm);
 
 /* TWO-OFFER: book-a-call CTAs (hero + in-form). Fire the book_click beacon (src rides for
    team-test exclusion), carry any already-typed contact fields so the booking widget prefills. */
