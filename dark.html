@@ -765,6 +765,21 @@ document.getElementById("goInd").addEventListener("click",function(){
 /* step 3: team size */
 chips(".chips-team",TEAMS,function(i){state.team=i;updateEstimate(47);show(4)});
 /* step 4: needs (multi-select; "Not sure" is exclusive) */
+
+/* Troubleshoot leads get a diagnostic detail prompt (Jonathan 8/3): fix picked -> ask what's broken */
+function updateDetailPrompt(){
+  var isFix=state.needs.some(function(j){return NEEDS[j].key==="fix"});
+  var lab=document.querySelector('label[for="f-details"]'),ta=document.getElementById("f-details");
+  if(!lab||!ta)return;
+  if(isFix){
+    lab.innerHTML='What\u2019s broken? <span style="font-weight:400;opacity:.7">(the more detail, the sharper and often cheaper your quote &middot; tip: tap your keyboard mic and just talk)</span>';
+    ta.placeholder="What's breaking, where you notice it (a missed lead, a text that never sends), when it started, and what changed right before...";
+  }else{
+    lab.innerHTML='Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span>';
+    ta.placeholder="Current tools, pages you need, examples you like, deadlines, anything...";
+  }
+}
+
 chips(".chips-needs",NEEDS,function(i,btn){
   var box=document.querySelector(".chips-needs"),all=box.querySelectorAll(".chip");
   if(NEEDS[i].exclusive){
@@ -780,7 +795,7 @@ chips(".chips-needs",NEEDS,function(i,btn){
   }
   document.getElementById("err4").style.display="none";
   var otherIdx=NEEDS.findIndex(function(n){return n.key==="other"});
-  document.getElementById("needother").style.display=state.needs.indexOf(otherIdx)>-1?"block":"none";
+  document.getElementById("needother").style.display=state.needs.indexOf(otherIdx)>-1?"block":"none";updateDetailPrompt();
 },true);
 document.getElementById("goNeeds").addEventListener("click",function(){
   if(!needsValid()){document.getElementById("err4").style.display="block";return}
