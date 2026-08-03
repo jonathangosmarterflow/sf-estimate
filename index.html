@@ -279,6 +279,8 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <input id="f-name" class="f-name" autocomplete="name" placeholder="Alex Rivera">
               <label for="f-email">Email</label>
               <input id="f-email" class="f-email" type="email" autocomplete="email" placeholder="alex@business.com">
+              <!-- suspect-guard honeypot (2026-08-03): invisible to humans, autofilled by bots; any value = instant challenge -->
+              <input id="f-hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:1px;width:1px;opacity:0;pointer-events:none">
               <label for="f-phone">Phone</label>
               <div class="phone-wrap">
                 <button type="button" class="ccbtn" id="ccbtn" aria-haspopup="listbox" aria-expanded="false">
@@ -704,6 +706,7 @@ function baseLead(){
     phone:(selCountry.d+" "+localPhone).trim(),
     country:selCountry.n,country_code:selCountry.d,country_tier:selCountry.t,
     preferred_channel:"Email",lead_source:LEAD_SOURCE,
+    company_hp:(document.getElementById("f-hp")?document.getElementById("f-hp").value:"")||"", /* suspect-guard honeypot */
     estimate_version:EST_VERSION /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
   };
 }
@@ -745,10 +748,12 @@ document.getElementById("go2").addEventListener("click",function(){
   var w=web.value.trim(),bad2=!w||w.indexOf(".")<0;web.style.borderColor=bad2?"#ff7a7a":"";
   document.getElementById("err1").style.display=(bad1||bad2)?"block":"none";
   if(bad1||bad2)return;
+  window.__webSkip=0; /* suspect guard: real website typed */
   updateEstimate(24);
   show(2);
 });
 document.getElementById("skipweb").addEventListener("click",function(){
+  window.__webSkip=1; /* suspect guard: lead explicitly has no website yet */
   var biz=document.getElementById("f-biz");
   if(!biz.value.trim()){biz.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";return}
   /* Jed feedback 7/11: never clear a typed website on skip (skip is hidden when filled; guard anyway) */
@@ -876,6 +881,7 @@ function finishForm(timelineLabel){
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
   lead.form_started_at=window.__formStart||""; /* journey telemetry: step-1 time; worker stamps completion */
+  lead.website_skipped=window.__webSkip?"1":""; /* suspect guard: explicit no-website-yet (mild signal, never blocks) */
   window.__leadPayload=lead; /* carried into the worker ping below (bypasses HL note-mapping for new fields) */
   post(lead);
   /* instant-estimate trigger: nudge the 24/7 worker ~8s after the webhook lands in HL,
