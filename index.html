@@ -218,6 +218,24 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
 .v3btn.b:hover{background:rgba(124,58,237,.07)}
 .v3form{max-width:560px;margin:42px auto 0}
 @media(max-width:820px){.v3doors{grid-template-columns:1fr;gap:16px;margin-top:26px}.v3form{margin-top:32px}.v3card{padding:22px 20px}}
+
+/* ===== CONVERSION VARIANTS — shared bits (mini trust strip above form + post-form book link) ===== */
+.trustmini{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;margin:18px auto 2px;font-size:13.5px;color:var(--muted);font-weight:500;max-width:680px;text-align:center;line-height:1.5}
+.trustmini .stars{color:#f5b301;font-size:15px;letter-spacing:2px}
+.trustmini b{color:var(--ink);font-weight:700}
+.belowform{max-width:560px;margin:16px auto 0;text-align:center;font-size:13.5px;color:var(--muted2)}
+.belowform a{font-weight:700;color:var(--vio);text-decoration:none}
+.belowform a:hover{text-decoration:underline}
+
+/* ===== v3b — two clean doors (no visible form until estimate is clicked) ===== */
+.v3btns{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:680px;margin:30px auto 0}
+.bigbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:20px 22px;border-radius:14px;font-family:var(--head);font-weight:800;font-size:17px;text-decoration:none;cursor:pointer;transition:.16s;line-height:1.2}
+.bigbtn small{font-family:var(--body);font-weight:600;font-size:12.5px;opacity:.88}
+.bigbtn.primary{background:var(--grad-cta);color:#fff;box-shadow:0 14px 34px rgba(124,58,237,.35)}
+.bigbtn.primary:hover{transform:translateY(-2px);box-shadow:0 18px 42px rgba(124,58,237,.45)}
+.bigbtn.ghost{background:#fff;color:var(--vio);border:1.5px solid rgba(124,58,237,.4)}
+.bigbtn.ghost:hover{background:rgba(124,58,237,.06)}
+@media(max-width:640px){.v3btns{grid-template-columns:1fr;gap:12px;margin-top:24px}}
 </style>
 </head>
 <body>
@@ -233,39 +251,17 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
     <!-- ===== V3 WEIGHTED TWO-DOOR (staging) — headline + subline, VSL slot, two doors, then the form ===== -->
     <div class="v3top">
       <span class="eyebrow">Free &middot; Instant &middot; No sales call</span>
-      <h1>Know your HighLevel project&#39;s price in minutes, or talk it through with <em>someone who has done it 65+ times</em>.</h1>
-      <p class="sub">No sales call required to get a number. Get an instant AI estimate built from real billed hours, or book a free 30-minute call and we will map it out together. Your choice.</p>
-    </div>
-
-    <!-- VSL SLOT: hidden until a hero video exists. To go live: add class "on" to #vsl-slot and drop the <video>/embed inside the inner box. -->
-    <div id="vsl-slot" aria-hidden="true">
-      <div style="position:relative;aspect-ratio:16/9;border-radius:18px;overflow:hidden;background:linear-gradient(160deg,#efe9ff,#f6f1ff);border:1px solid rgba(124,58,237,.18);display:flex;align-items:center;justify-content:center">
-        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(100deg,#4f46e5,#7c3aed);display:flex;align-items:center;justify-content:center;box-shadow:0 14px 34px rgba(124,58,237,.35)">
-          <span style="color:#fff;font-size:22px;line-height:1;margin-left:4px">&#9654;</span>
-        </div>
+      <h1>Know your HighLevel project&#39;s price in minutes, or talk it through with <em>someone who has done hundreds of them</em>.</h1>
+      <p class="sub">Get an instant AI estimate built from real billed hours, no sales call required. Or book a free 30-minute call and we will map it out together. Your choice.</p>
+      <div class="trustmini"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> Rated <b>5/5</b> across <b>65+ reviews</b> on the official HighLevel Directory &middot; <b>#3</b> most-reviewed</div>
+      <div class="v3btns">
+        <a href="#hero" class="bigbtn primary" id="doorEstimate">Get my instant estimate &#8594;<small>2 minutes &middot; no call required</small></a>
+        <a href="book.html" class="bigbtn ghost booklink" id="doorBook">Book a free 30-minute call &#8594;<small>prefer to talk it through live</small></a>
       </div>
     </div>
 
-    <!-- Weighted two doors: A (estimate) = dominant, B (call) = real but lighter. NEVER equal weight. -->
-    <div class="v3doors">
-      <div class="v3card a">
-        <div class="dt">Get my instant estimate</div>
-        <div class="db">Answer a few quick questions and get a real hours-and-price estimate, no call required.</div>
-        <div class="dp">Built from the actual billed hours of projects like yours, so the number is real, not a guess.</div>
-        <a href="#hero" class="v3btn a" id="doorEstimate">Show me my price &#8594;</a>
-        <div class="dm">Takes about 2 minutes. Free, no obligation.</div>
-      </div>
-      <div class="v3card b">
-        <div class="dt">Book a free 30-min consulting call</div>
-        <div class="db">Prefer to talk it through first? Grab a free 30-minute call and we will plan it with you.</div>
-        <div class="dp">No pressure and no mystery pricing. You leave knowing exactly what your project takes.</div>
-        <a href="book.html" class="v3btn b booklink" id="doorBook">Pick a call time &#8594;</a>
-        <div class="dm">Free 30 minutes. Bring your questions.</div>
-      </div>
-    </div>
-
-    <!-- CONVERSATIONAL FORM (Door A scrolls here and starts it) -->
-    <div class="formwrap v3form">
+    <!-- Form stays hidden until "Get my instant estimate" is clicked (reveal + smooth scroll). No triple-CTA. -->
+    <div class="formwrap v3form" id="formReveal" style="display:none">
         <div class="convo" id="convo">
           <div class="ctop">
             <div class="stepl">Step <span class="snum">1</span> of 7</div>
@@ -279,8 +275,6 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <input id="f-name" class="f-name" autocomplete="name" placeholder="Alex Rivera">
               <label for="f-email">Email</label>
               <input id="f-email" class="f-email" type="email" autocomplete="email" placeholder="alex@business.com">
-              <!-- suspect-guard honeypot (2026-08-03): invisible to humans, autofilled by bots; any value = instant challenge -->
-              <input id="f-hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:1px;width:1px;opacity:0;pointer-events:none">
               <label for="f-phone">Phone</label>
               <div class="phone-wrap">
                 <button type="button" class="ccbtn" id="ccbtn" aria-haspopup="listbox" aria-expanded="false">
@@ -396,14 +390,6 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
   </div>
 </section>
 
-<!-- ===== TRUST BAR ===== -->
-<div class="trust">
-  <div class="wrap">
-    <span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-    <span class="tline">Rated <b>5/5</b> across <b>65+ reviews</b> on the official HighLevel Directory &middot; <b>#3</b> most-reviewed &middot; your estimate <b>in your inbox in minutes</b></span>
-  </div>
-</div>
-
 <!-- ===== HOW IT WORKS ===== -->
 <section class="block">
   <div class="wrap">
@@ -453,7 +439,7 @@ var HL_WEBHOOK_URL="https://services.leadconnectorhq.com/hooks/8cbLPOBT7W64ad5G2
 var RATE=55;
 var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function qs(){try{return new URLSearchParams(location.search).get("source")||""}catch(e){return""}}
-var LEAD_SOURCE=qs()||"Landing page (Electric Light Still)";
+var LEAD_SOURCE=qs()||"Landing page (v3b two-door)";
 
 /* POST-BOOKING PREFILL: if n/e/p arrive in the query (e.g. the post-booking intake link
    ?source=post-booking&n=<name>&e=<email>&p=<phone>), pre-populate the contact inputs so the
@@ -593,11 +579,11 @@ renderCC("");
 /* ===EST-TABLE-START auto-generated by regen-estimate-table.py (edit ranges THERE + in the Estimate Anchors data, never here)=== */
 var EST_VERSION="v2-20260730";
 var SCOPES=[
-  {label:"A funnel + follow-up automations",lo:17,hi:28},
-  {label:"A full system, built from scratch",lo:42,hi:63},
-  {label:"Redesign or rebuild what I have",lo:32,hi:46},
+  {label:"A funnel + follow-up automations",lo:15,hi:27},
+  {label:"A full system, built from scratch",lo:41,hi:57},
+  {label:"Redesign or rebuild what I have",lo:32,hi:45},
   {label:"Fixes and cleanup",lo:5,hi:11},
-  {label:"Not sure yet, that’s fine",lo:11,hi:22}
+  {label:"Not sure yet, that’s fine",lo:12,hi:22}
 ];
 var ACCOUNTS=[
   {label:"Fresh or empty",d:[2,3]},
@@ -706,7 +692,6 @@ function baseLead(){
     phone:(selCountry.d+" "+localPhone).trim(),
     country:selCountry.n,country_code:selCountry.d,country_tier:selCountry.t,
     preferred_channel:"Email",lead_source:LEAD_SOURCE,
-    company_hp:(document.getElementById("f-hp")?document.getElementById("f-hp").value:"")||"", /* suspect-guard honeypot */
     estimate_version:EST_VERSION /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
   };
 }
@@ -748,12 +733,10 @@ document.getElementById("go2").addEventListener("click",function(){
   var w=web.value.trim(),bad2=!w||w.indexOf(".")<0;web.style.borderColor=bad2?"#ff7a7a":"";
   document.getElementById("err1").style.display=(bad1||bad2)?"block":"none";
   if(bad1||bad2)return;
-  window.__webSkip=0; /* suspect guard: real website typed */
   updateEstimate(24);
   show(2);
 });
 document.getElementById("skipweb").addEventListener("click",function(){
-  window.__webSkip=1; /* suspect guard: lead explicitly has no website yet */
   var biz=document.getElementById("f-biz");
   if(!biz.value.trim()){biz.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";return}
   /* Jed feedback 7/11: never clear a typed website on skip (skip is hidden when filled; guard anyway) */
@@ -881,7 +864,6 @@ function finishForm(timelineLabel){
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
   lead.form_started_at=window.__formStart||""; /* journey telemetry: step-1 time; worker stamps completion */
-  lead.website_skipped=window.__webSkip?"1":""; /* suspect guard: explicit no-website-yet (mild signal, never blocks) */
   window.__leadPayload=lead; /* carried into the worker ping below (bypasses HL note-mapping for new fields) */
   post(lead);
   /* instant-estimate trigger: nudge the 24/7 worker ~8s after the webhook lands in HL,
@@ -949,6 +931,7 @@ document.getElementById("jumpEstimate").addEventListener("click",glideToForm);
    TO the form (now below the doors) instead of to page top. */
 function startEstimate(e){
   if(e)e.preventDefault();
+  var fr=document.getElementById("formReveal");if(fr){fr.style.display="";}
   var card=document.getElementById("convo");
   try{card.scrollIntoView({behavior:reduced?"auto":"smooth",block:"center"})}catch(_){window.scrollTo(0,0)}
   setTimeout(function(){
