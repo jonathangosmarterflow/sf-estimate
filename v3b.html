@@ -463,8 +463,8 @@ function sfBeacon(ev,step,src){
     if(step!=null)p.step=step;
     if(src)p.src=src;
     var body=JSON.stringify(p);
-    if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"application/json"}))}
-    else{fetch(SF_EVENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true})}
+    if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"text/plain"}))}
+    else{fetch(SF_EVENT_URL,{method:"POST",body:body,mode:"no-cors",keepalive:true})}
   }catch(e){}
 }
 try{sfBeacon("view",null,qs())}catch(e){}
