@@ -300,12 +300,13 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <input id="f-biz" placeholder="Acme Home Services">
               <label for="f-web">Business website</label>
               <input id="f-web" type="text" inputmode="url" autocomplete="url" placeholder="yourbusiness.com">
+              <label class="nowebrow" for="f-noweb" style="display:flex;align-items:center;gap:9px;margin:9px 0 2px;font-size:13.5px;color:var(--muted2);cursor:pointer;user-select:none;-webkit-user-select:none;font-weight:500"><input type="checkbox" id="f-noweb" style="width:17px;height:17px;flex:none;accent-color:var(--vio);cursor:pointer;margin:0">I don&#39;t have a website</label>
               <div class="xtra"><button type="button" class="xtoggle" data-x="1" style="background:none;border:0;padding:0;margin:10px 0 0;font-size:13px;color:#7c3aed;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px">+ Add extra detail (optional)</button>
               <div class="xbox" id="xbox-1" style="display:none"><div style="font-size:12.5px;opacity:.65;margin:6px 0 4px">Totally optional, but anything you share helps us make your estimate as accurate as possible.</div>
               <textarea id="f-note-1" maxlength="1200" rows="2" placeholder="e.g. what you sell, how leads come in today, what's working and what isn't..." style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:#191627;resize:vertical;margin-bottom:10px"></textarea></div></div>
               <button class="cbtn" id="go2">Continue</button>
-              <div class="err" id="err1">Please add your business name and website (or use skip below).</div>
-              <div class="navrow"><button class="backl">&#8592; back</button><button class="skiplink" id="skipweb" type="button">No website yet? Skip &#8594;</button></div>
+              <div class="err" id="err1">Please add your business name and website, or check &ldquo;I don&rsquo;t have a website&rdquo;.</div>
+              <div class="navrow"><button class="backl">&#8592; back</button></div>
             </div>
             <!-- STEP 2: industry -->
             <div class="screen s2">
@@ -722,26 +723,19 @@ document.getElementById("go1").addEventListener("click",function(){
   updateEstimate(12);
   show(1);
 });
-/* Jed feedback 7/11: hide the skip link once a website is typed, so filled data is never silently dropped */
-document.getElementById("f-web").addEventListener("input",function(){
-  document.getElementById("skipweb").style.display=this.value.trim()?"none":"inline-block";
+/* step 1: website is REQUIRED unless the lead checks "I don't have a website" (Jonathan 2026-08-07).
+   Checking the box clears + disables the field and drops the requirement; unchecking restores it. */
+document.getElementById("f-noweb").addEventListener("change",function(){
+  var web=document.getElementById("f-web");
+  if(this.checked){web.value="";web.disabled=true;web.style.borderColor="";web.style.opacity=".5";document.getElementById("err1").style.display="none";}
+  else{web.disabled=false;web.style.opacity="";}
 });
-/* step 1: business name + website (website skippable, everything else required) */
 document.getElementById("go2").addEventListener("click",function(){
-  var biz=document.getElementById("f-biz"),web=document.getElementById("f-web");
+  var biz=document.getElementById("f-biz"),web=document.getElementById("f-web"),noweb=document.getElementById("f-noweb").checked;
   var bad1=!biz.value.trim();biz.style.borderColor=bad1?"#ff7a7a":"";
-  var w=web.value.trim(),bad2=!w||w.indexOf(".")<0;web.style.borderColor=bad2?"#ff7a7a":"";
+  var w=web.value.trim(),bad2=!noweb&&(!w||w.indexOf(".")<0);web.style.borderColor=bad2?"#ff7a7a":"";
   document.getElementById("err1").style.display=(bad1||bad2)?"block":"none";
   if(bad1||bad2)return;
-  updateEstimate(24);
-  show(2);
-});
-document.getElementById("skipweb").addEventListener("click",function(){
-  var biz=document.getElementById("f-biz");
-  if(!biz.value.trim()){biz.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";return}
-  /* Jed feedback 7/11: never clear a typed website on skip (skip is hidden when filled; guard anyway) */
-  if(!document.getElementById("f-web").value.trim())document.getElementById("f-web").value="";
-  document.getElementById("err1").style.display="none";
   updateEstimate(24);
   show(2);
 });
@@ -841,9 +835,11 @@ function finishForm(timelineLabel){
   var r=range(),lead=baseLead();
   lead.lead_stage="completed";
   lead.business=(document.getElementById("f-biz").value||"").trim();
+  var noweb=document.getElementById("f-noweb")&&document.getElementById("f-noweb").checked;
   var w=(document.getElementById("f-web").value||"").trim();
   if(w&&!/^https?:\/\//i.test(w))w="https://"+w;
-  lead.business_website=w||"(none)";
+  lead.no_website=!!noweb; /* lead ticked "I don't have a website" -> worker skips the scrape, readiness-gates the demo */
+  lead.business_website=(noweb?"":w)||"(none)";
   lead.industry=state.industry||"";
   lead.team_size=TEAMS[state.team]?TEAMS[state.team].label:"";
   var needsTxt=state.needs.map(function(j){
