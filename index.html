@@ -367,6 +367,14 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               </div>
               <label for="f-details" style="margin-top:14px">Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span></label>
               <textarea id="f-details" maxlength="6000" rows="3" placeholder="Current tools, pages you need, examples you like, deadlines, anything..." style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:#191627;resize:vertical;margin-bottom:10px"></textarea>
+              <label for="f-channel" style="margin-top:4px">Where do you answer fastest? <span style="font-weight:400;opacity:.7">(optional)</span></label>
+              <select id="f-channel" style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:#191627;margin-bottom:10px">
+                <option value="">No preference</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone call</option>
+                <option value="sms" id="f-channel-sms">Text (SMS)</option>
+              </select>
+              <label class="warow" for="f-whatsapp" style="display:flex;align-items:flex-start;gap:9px;margin:2px 0 12px;font-size:13.5px;color:var(--muted2);cursor:pointer;user-select:none;-webkit-user-select:none;font-weight:500;line-height:1.45"><input type="checkbox" id="f-whatsapp" style="width:17px;height:17px;flex:none;accent-color:var(--vio);cursor:pointer;margin:2px 0 0"><span>I&#39;m open to Smarter Flow sending me project updates on WhatsApp in the future.</span></label>
               <button class="cbtn" id="goFinish">Get my estimate &#8594;</button>
               <div class="err" id="errtime">Please pick a timeline above.</div>
               <button class="backl">&#8592; back</button>
@@ -452,36 +460,154 @@ var LEAD_SOURCE=qs()||"Landing page (v3b two-door)";
   }catch(_){}
 })();
 
-/* ================= EVENT BEACONS (funnel telemetry -> /event worker) =================
-   Fire-and-forget page/journey pings. Every call is wrapped so ANY failure is silently
-   swallowed: the form is never affected if the endpoint is down (it may deploy after this
-   page). sendBeacon first, fetch keepalive fallback. */
+/* ================= EVENT BEACONS v2 (funnel telemetry -> /event worker) =================
+   Fire-and-forget page/journey pings. EVERY call is wrapped so ANY failure is silently
+   swallowed: the form is never affected if the endpoint is down or slow.
+   v2 (2026-08-18): session id + step timings + field + validation + click + scroll depth.
+   Transport: fetch(keepalive) FIRST, sendBeacon as the fallback (sendBeacon is unreliable on
+   mobile Safari). Body is sent as text/plain so it stays a "simple request" (zero CORS preflight);
+   the worker parses it as JSON regardless. */
+/* 🔖 PAGE VERSION — BUMP THIS ON ANY LAYOUT OR COPY CHANGE TO THIS PAGE.
+   Format vYYYY-MM-DD + a letter for same-day revisions. It stamps every event row so a
+   metrics shift can be attributed to the exact page revision that caused it. */
+var SF_PAGE_VERSION="v2026-08-18a";
+var SF_PAGE_NAME="home";
 var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
     SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
-function sfBeacon(ev,step,src){
+/* session id: per-tab, sessionStorage only (NO cookies, nothing cross-site, cleared on tab close).
+   It is what joins this visitor's behavior rows to their lead record. */
+function sfSid(){
   try{
-    var p={t:SF_EVENT_TOKEN,e:ev};
-    if(step!=null)p.step=step;
-    if(src)p.src=src;
+    var k="sf_sid",v=sessionStorage.getItem(k);
+    if(!v){v=(crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));sessionStorage.setItem(k,v)}
+    return v;
+  }catch(e){return ""}
+}
+function sfSend(p){
+  try{
+    p.t=SF_EVENT_TOKEN;p.sid=sfSid();p.hp="";           /* hp = honeypot: bots fill it, worker drops those */
+    p.page=SF_PAGE_NAME;p.page_version=SF_PAGE_VERSION;
+    if(p.src==null){var s0=qs();if(s0)p.src=s0}
     var body=JSON.stringify(p);
-    if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"text/plain"}))}
-    else{fetch(SF_EVENT_URL,{method:"POST",body:body,mode:"no-cors",keepalive:true})}
+    if(window.fetch){fetch(SF_EVENT_URL,{method:"POST",body:body,keepalive:true})["catch"](function(){})}
+    else if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"text/plain"}))}
   }catch(e){}
 }
-try{sfBeacon("view",null,qs())}catch(e){}
+/* legacy signature kept so every existing call site keeps working unchanged */
+function sfBeacon(ev,step,src){var p={e:ev};if(step!=null)p.step=step;if(src)p.src=src;sfSend(p)}
+function sfEvent(ev,extra){var p=extra||{};p.e=ev;sfSend(p)}
+
+/* view: + referrer and the FULL query string (today only ?source= was captured, so every other
+   campaign/UTM parameter was invisible) */
+try{sfEvent("view",{referrer:(document.referrer||""),qs:(location.search||"")})}catch(e){}
+
 /* form_start: first interaction with the form card (focus or input), fired once */
 (function(){var done=false;function fs(){if(done)return;done=true;try{sfBeacon("form_start")}catch(e){}}
   try{var cv=document.getElementById("convo");if(cv){cv.addEventListener("focusin",fs);cv.addEventListener("input",fs)}}catch(e){}})();
+
+/* STEP TIMING: step_start on entering a step, step_complete on leaving it FORWARD (with ms spent).
+   Called from show(). step_complete is what the worker's legacy KV "step" counter now counts, so
+   the existing per-day step counter keeps working with no gap. */
+/* Step 0 (the contact step) is ALREADY on screen at load — show() is never called for it — so its
+   timer is seeded here and step_start(0) is fired explicitly. Without this seed, step-0 dwell time
+   (the single most important drop-off number on the page) would be invisible, AND the legacy per-day
+   KV "step" counter would lose exactly one bump per session vs. the old beacon. */
+var SF_STEP_I=0,SF_STEP_AT=Date.now();
+function sfStep(i){
+  try{
+    if(SF_STEP_I===i)return;
+    if(SF_STEP_I!=null&&i>SF_STEP_I)sfEvent("step_complete",{step:SF_STEP_I,ms:Date.now()-SF_STEP_AT});
+    SF_STEP_I=i;SF_STEP_AT=Date.now();
+    sfEvent("step_start",{step:i});
+  }catch(e){}
+}
+try{sfEvent("step_start",{step:0})}catch(e){}
+
+/* FIELDS: focus + blur with time-in-field. selector carries "filled"/"empty" so an abandon
+   (left empty after focusing) is one WHERE clause away, without adding a column. */
+(function(){
+  try{
+    var cv=document.getElementById("convo");if(!cv)return;
+    var at=0,nm="";
+    var name=function(el){return el.id||el.name||(el.tagName||"").toLowerCase()};
+    cv.addEventListener("focusin",function(ev){
+      var el=ev.target;if(!el||!/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||""))return;
+      at=Date.now();nm=name(el);sfEvent("field_focus",{field:nm});
+    });
+    cv.addEventListener("focusout",function(ev){
+      var el=ev.target;if(!el||!/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||""))return;
+      if(name(el)!==nm||!at)return;
+      var filled=!!(el.value&&String(el.value).trim());
+      sfEvent("field_abandon",{field:nm,ms:Date.now()-at,selector:filled?"filled":"empty"});
+      at=0;nm="";
+    });
+  }catch(e){}
+})();
+
+/* VALIDATION ERRORS: every blocking message on this page is a .err div toggled to display:block.
+   Observing them centrally means zero edits to the validation logic itself (nothing can break the
+   form), and it can never drift out of sync with a new validation path. */
+(function(){
+  try{
+    if(!window.MutationObserver)return;
+    var shown={};
+    var obs=new MutationObserver(function(muts){
+      for(var i=0;i<muts.length;i++){
+        var el=muts[i].target;if(!el||!el.id)continue;
+        var on=el.style&&el.style.display==="block";
+        if(on&&!shown[el.id]){shown[el.id]=1;sfEvent("validation_error",{field:el.id,step:(SF_STEP_I==null?null:SF_STEP_I)})}
+        else if(!on){shown[el.id]=0}
+      }
+    });
+    var errs=document.querySelectorAll(".err");
+    for(var j=0;j<errs.length;j++)obs.observe(errs[j],{attributes:true,attributeFilter:["style"]});
+  }catch(e){}
+})();
+
+/* CLICKS: links + buttons only, capped at 30/session so a rage-clicker cannot flood the store.
+   x/y are viewport-relative 0-1 floats (resolution independent, so heatmapping works across devices). */
+(function(){
+  try{
+    var n=0;
+    document.addEventListener("click",function(ev){
+      try{
+        if(n>=30)return;
+        var el=ev.target&&ev.target.closest?ev.target.closest("a[href],button,[role=button]"):null;
+        if(!el)return;
+        n++;
+        var sel=(el.tagName||"").toLowerCase()+(el.id?"#"+el.id:(el.className&&typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().split(/\s+/)[0]:""));
+        var w=window.innerWidth||1,h=window.innerHeight||1;
+        sfEvent("click",{selector:sel.slice(0,200),x:Math.round((ev.clientX/w)*1000)/1000,y:Math.round((ev.clientY/h)*1000)/1000});
+      }catch(e){}
+    },true);
+  }catch(e){}
+})();
+
+/* SCROLL DEPTH: one event each at 25/50/75/100% — answers "how far down does the page actually get read". */
+(function(){
+  try{
+    var marks=[25,50,75,100],hit={},tick=function(){
+      try{
+        var d=document.documentElement,b=document.body;
+        var H=Math.max(d.scrollHeight,b?b.scrollHeight:0)-(window.innerHeight||0);
+        if(H<=0)return;
+        var pct=Math.round(((window.pageYOffset||d.scrollTop||0)/H)*100);
+        for(var i=0;i<marks.length;i++){if(pct>=marks[i]&&!hit[marks[i]]){hit[marks[i]]=1;sfEvent("scroll",{scroll_pct:marks[i]})}}
+      }catch(e){}
+    };
+    window.addEventListener("scroll",function(){if(!window.__sfScrollQ){window.__sfScrollQ=1;setTimeout(function(){window.__sfScrollQ=0;tick()},250)}},{passive:true});
+  }catch(e){}
+})();
 
 /* ================= COUNTRY / TIER DATA (tier 1=core .. 4=pass) ================= */
 /* tier drives back-end routing; front-end stays capture-first for everyone */
 var COUNTRIES=[
   {n:"United States",d:"+1",f:"🇺🇸",t:1},
   {n:"Canada",d:"+1",f:"🇨🇦",t:1},
-  {n:"United Kingdom",d:"+44",f:"🇬🇧",t:1},
-  {n:"Australia",d:"+61",f:"🇦🇺",t:1},
-  {n:"New Zealand",d:"+64",f:"🇳🇿",t:1},
-  {n:"Ireland",d:"+353",f:"🇮🇪",t:1},
+  {n:"United Kingdom",d:"+44",f:"🇬🇧",t:2},
+  {n:"Australia",d:"+61",f:"🇦🇺",t:2},
+  {n:"New Zealand",d:"+64",f:"🇳🇿",t:2},
+  {n:"Ireland",d:"+353",f:"🇮🇪",t:2},
   {n:"Germany",d:"+49",f:"🇩🇪",t:2},
   {n:"Netherlands",d:"+31",f:"🇳🇱",t:2},
   {n:"Switzerland",d:"+41",f:"🇨🇭",t:2},
@@ -494,9 +620,9 @@ var COUNTRIES=[
   {n:"Denmark",d:"+45",f:"🇩🇰",t:2},
   {n:"Finland",d:"+358",f:"🇫🇮",t:2},
   {n:"Iceland",d:"+354",f:"🇮🇸",t:2},
-  {n:"Singapore",d:"+65",f:"🇸🇬",t:2},
-  {n:"United Arab Emirates",d:"+971",f:"🇦🇪",t:2},
-  {n:"Hong Kong",d:"+852",f:"🇭🇰",t:2},
+  {n:"Singapore",d:"+65",f:"🇸🇬",t:3},
+  {n:"United Arab Emirates",d:"+971",f:"🇦🇪",t:3},
+  {n:"Hong Kong",d:"+852",f:"🇭🇰",t:3},
   {n:"Japan",d:"+81",f:"🇯🇵",t:3},
   {n:"South Korea",d:"+82",f:"🇰🇷",t:3},
   {n:"Taiwan",d:"+886",f:"🇹🇼",t:3},
@@ -505,44 +631,44 @@ var COUNTRIES=[
   {n:"Qatar",d:"+974",f:"🇶🇦",t:3},
   {n:"Kuwait",d:"+965",f:"🇰🇼",t:3},
   {n:"Bahrain",d:"+973",f:"🇧🇭",t:3},
-  {n:"Spain",d:"+34",f:"🇪🇸",t:3},
-  {n:"Italy",d:"+39",f:"🇮🇹",t:3},
-  {n:"Portugal",d:"+351",f:"🇵🇹",t:3},
+  {n:"Spain",d:"+34",f:"🇪🇸",t:2},
+  {n:"Italy",d:"+39",f:"🇮🇹",t:2},
+  {n:"Portugal",d:"+351",f:"🇵🇹",t:2},
   {n:"Poland",d:"+48",f:"🇵🇱",t:3},
   {n:"Czechia",d:"+420",f:"🇨🇿",t:3},
   {n:"Chile",d:"+56",f:"🇨🇱",t:3},
   {n:"Uruguay",d:"+598",f:"🇺🇾",t:3},
   {n:"Mexico",d:"+52",f:"🇲🇽",t:3},
   {n:"South Africa",d:"+27",f:"🇿🇦",t:3},
-  {n:"Philippines",d:"+63",f:"🇵🇭",t:4},
+  {n:"Philippines",d:"+63",f:"🇵🇭",t:3},
   {n:"India",d:"+91",f:"🇮🇳",t:4},
-  {n:"Pakistan",d:"+92",f:"🇵🇰",t:4},
-  {n:"Bangladesh",d:"+880",f:"🇧🇩",t:4},
-  {n:"Indonesia",d:"+62",f:"🇮🇩",t:4},
-  {n:"Vietnam",d:"+84",f:"🇻🇳",t:4},
-  {n:"Thailand",d:"+66",f:"🇹🇭",t:4},
-  {n:"Malaysia",d:"+60",f:"🇲🇾",t:4},
-  {n:"Nigeria",d:"+234",f:"🇳🇬",t:4},
-  {n:"Kenya",d:"+254",f:"🇰🇪",t:4},
-  {n:"Ghana",d:"+233",f:"🇬🇭",t:4},
-  {n:"Egypt",d:"+20",f:"🇪🇬",t:4},
-  {n:"Morocco",d:"+212",f:"🇲🇦",t:4},
-  {n:"Brazil",d:"+55",f:"🇧🇷",t:4},
-  {n:"Argentina",d:"+54",f:"🇦🇷",t:4},
-  {n:"Colombia",d:"+57",f:"🇨🇴",t:4},
-  {n:"Peru",d:"+51",f:"🇵🇪",t:4},
-  {n:"Ecuador",d:"+593",f:"🇪🇨",t:4},
-  {n:"Guatemala",d:"+502",f:"🇬🇹",t:4},
-  {n:"Costa Rica",d:"+506",f:"🇨🇷",t:4},
-  {n:"Panama",d:"+507",f:"🇵🇦",t:4},
-  {n:"Turkey",d:"+90",f:"🇹🇷",t:4},
-  {n:"Greece",d:"+30",f:"🇬🇷",t:4},
-  {n:"Romania",d:"+40",f:"🇷🇴",t:4},
-  {n:"Hungary",d:"+36",f:"🇭🇺",t:4},
-  {n:"Ukraine",d:"+380",f:"🇺🇦",t:4},
-  {n:"Nepal",d:"+977",f:"🇳🇵",t:4},
-  {n:"Sri Lanka",d:"+94",f:"🇱🇰",t:4},
-  {n:"China",d:"+86",f:"🇨🇳",t:4}
+  {n:"Pakistan",d:"+92",f:"🇵🇰",t:3},
+  {n:"Bangladesh",d:"+880",f:"🇧🇩",t:3},
+  {n:"Indonesia",d:"+62",f:"🇮🇩",t:3},
+  {n:"Vietnam",d:"+84",f:"🇻🇳",t:3},
+  {n:"Thailand",d:"+66",f:"🇹🇭",t:3},
+  {n:"Malaysia",d:"+60",f:"🇲🇾",t:3},
+  {n:"Nigeria",d:"+234",f:"🇳🇬",t:3},
+  {n:"Kenya",d:"+254",f:"🇰🇪",t:3},
+  {n:"Ghana",d:"+233",f:"🇬🇭",t:3},
+  {n:"Egypt",d:"+20",f:"🇪🇬",t:3},
+  {n:"Morocco",d:"+212",f:"🇲🇦",t:3},
+  {n:"Brazil",d:"+55",f:"🇧🇷",t:3},
+  {n:"Argentina",d:"+54",f:"🇦🇷",t:3},
+  {n:"Colombia",d:"+57",f:"🇨🇴",t:3},
+  {n:"Peru",d:"+51",f:"🇵🇪",t:3},
+  {n:"Ecuador",d:"+593",f:"🇪🇨",t:3},
+  {n:"Guatemala",d:"+502",f:"🇬🇹",t:3},
+  {n:"Costa Rica",d:"+506",f:"🇨🇷",t:3},
+  {n:"Panama",d:"+507",f:"🇵🇦",t:3},
+  {n:"Turkey",d:"+90",f:"🇹🇷",t:3},
+  {n:"Greece",d:"+30",f:"🇬🇷",t:3},
+  {n:"Romania",d:"+40",f:"🇷🇴",t:3},
+  {n:"Hungary",d:"+36",f:"🇭🇺",t:3},
+  {n:"Ukraine",d:"+380",f:"🇺🇦",t:3},
+  {n:"Nepal",d:"+977",f:"🇳🇵",t:3},
+  {n:"Sri Lanka",d:"+94",f:"🇱🇰",t:3},
+  {n:"China",d:"+86",f:"🇨🇳",t:3}
 ];
 var selCountry=COUNTRIES[0];
 
@@ -568,7 +694,7 @@ function renderCC(filter){
     cclist.appendChild(b);
   });
 }
-function pickCountry(c){selCountry=c;ccflag.innerHTML=c.f;ccdialsel.textContent=c.d;}
+function pickCountry(c){selCountry=c;ccflag.innerHTML=c.f;ccdialsel.textContent=c.d;try{sfSyncChannelOptions()}catch(e){}}
 function openCC(){ccpop.classList.add("open");ccbtn.setAttribute("aria-expanded","true");ccsearch.value="";renderCC("");setTimeout(function(){ccsearch.focus()},30)}
 function closeCC(){ccpop.classList.remove("open");ccbtn.setAttribute("aria-expanded","false")}
 ccbtn.addEventListener("click",function(e){e.stopPropagation();ccpop.classList.contains("open")?closeCC():openCC()});
@@ -636,7 +762,7 @@ function show(i){
   snum.textContent=Math.min(i+1,7);
   bar.style.width=stepPct[i]+"%";
   /* still design 7/14: no background reaction on step advance (the .convo card pulse is feedback enough) */
-  if(i>lastShown){try{sfBeacon("step",i)}catch(e){}} /* forward step advance -> /event */
+  try{sfStep(i)}catch(e){} /* step_start on entry + step_complete (with ms) on leaving forward -> /event */
   lastShown=Math.max(lastShown,i);cur=i;
 }
 function chips(sel,items,onpick,multi){
@@ -682,18 +808,64 @@ function updateEstimate(acc,msg){
   if(msg)est.wait.innerHTML=msg;
 }
 
+/* ================= PHONE + CLOCK HELPERS (2026-09-01) =================
+   🔴 THE PHONE BUG THIS FIXES: `phone` was built as `selCountry.d + " " + typed`, with NO sanitisation,
+   and the picker DEFAULTS to the United States. A Belgian lead who types their own "+32 495 32 61 52"
+   therefore shipped "+1 +32495326152", which every downstream reader parses as a +1 US number. That is
+   half of how Jordy Thielemans (Ocean Wave Agency, Belgium) came out as tier 1 US.
+   RULE: if the lead typed an international prefix themselves, THEIR number wins and the picker's dial
+   code is ignored entirely. Otherwise the picker's code is prefixed exactly once. */
+function sfPhone(local){
+  var t=String(local||"").trim();
+  if(!t)return "";
+  var compact=t.replace(/[\s().\-]/g,"");
+  if(/^\+/.test(compact))return "+"+compact.slice(1).replace(/\D/g,"");     /* they typed +XX themselves */
+  if(/^00\d/.test(compact))return "+"+compact.slice(2).replace(/\D/g,"");   /* 00 is the same statement */
+  var code=String(selCountry.d||"").replace(/\D/g,"");
+  var digits=compact.replace(/\D/g,"");
+  if(code&&digits.indexOf(code)===0&&digits.length>code.length+5)return "+"+digits; /* already carries it */
+  return (selCountry.d+" "+t).trim();
+}
+function sfBrowserTz(){try{return (Intl.DateTimeFormat().resolvedOptions().timeZone)||""}catch(e){return ""}}
+function sfBrowserOffset(){try{return String(-new Date().getTimezoneOffset())}catch(e){return ""}}
+/* SMS is +1-only until an international SMS lane exists, so the option only appears on a +1 pick.
+   Offering it to a Belgian lead would be a promise we cannot keep. */
+function sfSyncChannelOptions(){
+  try{
+    var o=document.getElementById("f-channel-sms"),sel=document.getElementById("f-channel");
+    if(!o||!sel)return;
+    var us=String(selCountry.d||"")==="+1";
+    o.style.display=us?"":"none";o.disabled=!us;
+    if(!us&&sel.value==="sms")sel.value="";
+  }catch(e){}
+}
+
 /* ================= WEBHOOK POST (capture-first) ================= */
 function baseLead(){
   var full=(document.getElementById("f-name").value||"").trim();
   var parts=full.split(/\s+/);
   var localPhone=(document.getElementById("f-phone").value||"").trim();
+  var chanEl=document.getElementById("f-channel"),waEl=document.getElementById("f-whatsapp");
+  var chan=chanEl?(chanEl.value||""):"";
   return{
     full_name:full,first_name:parts[0]||"",last_name:parts.slice(1).join(" ")||"",
     email:(document.getElementById("f-email").value||"").trim(),
-    phone:(selCountry.d+" "+localPhone).trim(),
+    phone:sfPhone(localPhone),
     country:selCountry.n,country_code:selCountry.d,country_tier:selCountry.t,
-    preferred_channel:"Email",lead_source:LEAD_SOURCE,
-    estimate_version:EST_VERSION /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
+    /* 📇 THE REAL ANSWER, NOT A CONSTANT. This was hard-coded `preferred_channel:"Email"` and nobody
+       was ever asked, so the HL note printed "Preferred channel: Email" for every lead on earth. The
+       payload KEY is unchanged so the HighLevel note template and its field mapping keep working.
+       🔴 WHATSAPP IS DELIBERATELY NOT AN OPTION HERE: a dropdown choice is a promise, and there is no
+       lead-facing WhatsApp channel yet. Demand for one is measured by the separate opt-in below, which
+       is consent for a FUTURE channel and routes nothing today. */
+    preferred_channel:chan,channel_preference:chan,
+    whatsapp_optin:!!(waEl&&waEl.checked),
+    /* 🕐 THE BROWSER'S OWN CLOCK. The lead's OS timezone, which beats an IP a VPN or a mobile carrier
+       can move a thousand miles. The worker validates the IANA shape before believing it. */
+    browser_tz:sfBrowserTz(),browser_tz_offset:sfBrowserOffset(),
+    lead_source:LEAD_SOURCE,
+    estimate_version:EST_VERSION, /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
+    sid:(function(){try{return sfSid()}catch(e){return""}})() /* joins this lead to its behavior rows in the events store */
   };
 }
 function post(payload){
@@ -860,11 +1032,28 @@ function finishForm(timelineLabel){
   lead.estimate_hours_low=r[0];lead.estimate_hours_high=r[1];
   lead.estimate_price_low=r[0]*RATE;lead.estimate_price_high=r[1]*RATE;
   lead.form_started_at=window.__formStart||""; /* journey telemetry: step-1 time; worker stamps completion */
-  window.__leadPayload=lead; /* carried into the worker ping below (bypasses HL note-mapping for new fields) */
+  /* (`window.__leadPayload` retired 2026-09-01: it existed only to hand the payload to the 8-second
+     timer that never fired. The beacon below reads `lead` directly, so the global is dead weight.) */
   post(lead);
-  /* instant-estimate trigger: nudge the 24/7 worker ~8s after the webhook lands in HL,
-     so the estimate email goes out in seconds instead of on the next minute tick */
-  setTimeout(function(){try{fetch("https://hook.gosmarterflow.com/lead",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token:"5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0",lead:window.__leadPayload||null}),keepalive:true})}catch(e){}},8000);
+  /* 🔴 FIXED 2026-09-01 — THIS POST NEVER LANDED. It used to be scheduled with setTimeout(..., 8000)
+     while the redirect to thanks.html fires at 900ms, so the page unloaded SEVEN SECONDS before the
+     timer could run and the browser discarded it. `keepalive:true` protects a request already in
+     flight; it cannot resurrect a timer that never fired. VERIFIED 2026-09-01: the worker's KV held
+     ZERO `intake:` records (7-day TTL) against 6 real form submits in 30 days, the most recent
+     2026-08-31 17:03Z. Every field this payload carries (the country picker, country_code, cf_country,
+     the browser clock, project_details, the preferred channel, the WhatsApp opt-in) was silently lost
+     on EVERY completed form, and the estimate fell back to the slower HighLevel note-mapping path.
+     NOW: fired IMMEDIATELY, before any navigation, sendBeacon first (survives unload by contract) with
+     a fetch(keepalive) fallback. Sent as text/plain so it stays a simple request with no CORS
+     preflight; the worker parses the body as JSON either way. */
+  (function(){
+    try{
+      var body=JSON.stringify({token:"5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0",lead:lead});
+      var sent=false;
+      if(navigator&&navigator.sendBeacon){try{sent=navigator.sendBeacon("https://hook.gosmarterflow.com/lead",new Blob([body],{type:"text/plain;charset=UTF-8"}))}catch(e){sent=false}}
+      if(!sent)fetch("https://hook.gosmarterflow.com/lead",{method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},body:body,keepalive:true}).catch(function(){});
+    }catch(e){}
+  })();
 }
 /* timeline chips only RECORD the choice — submit is always the explicit button (never lose the detail field, CJ 7/14) */
 chips(".chips-time",TIMES,function(i){
