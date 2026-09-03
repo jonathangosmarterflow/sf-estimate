@@ -458,26 +458,144 @@ var LEAD_SOURCE=qs()||"Landing page (Deep Flow)";
   }catch(_){}
 })();
 
-/* ================= EVENT BEACONS (funnel telemetry -> /event worker) =================
-   Fire-and-forget page/journey pings. Every call is wrapped so ANY failure is silently
-   swallowed: the form is never affected if the endpoint is down (it may deploy after this
-   page). sendBeacon first, fetch keepalive fallback. */
+/* ================= EVENT BEACONS v2 (funnel telemetry -> /event worker) =================
+   Fire-and-forget page/journey pings. EVERY call is wrapped so ANY failure is silently
+   swallowed: the form is never affected if the endpoint is down or slow.
+   v2 (2026-08-18): session id + step timings + field + validation + click + scroll depth.
+   Transport: fetch(keepalive) FIRST, sendBeacon as the fallback (sendBeacon is unreliable on
+   mobile Safari). Body is sent as text/plain so it stays a "simple request" (zero CORS preflight);
+   the worker parses it as JSON regardless. */
+/* 🔖 PAGE VERSION — BUMP THIS ON ANY LAYOUT OR COPY CHANGE TO THIS PAGE.
+   Format vYYYY-MM-DD + a letter for same-day revisions. It stamps every event row so a
+   metrics shift can be attributed to the exact page revision that caused it. */
+var SF_PAGE_VERSION="v2026-08-18a-dark";
+var SF_PAGE_NAME="home";
 var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
     SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
-function sfBeacon(ev,step,src){
+/* session id: per-tab, sessionStorage only (NO cookies, nothing cross-site, cleared on tab close).
+   It is what joins this visitor's behavior rows to their lead record. */
+function sfSid(){
   try{
-    var p={t:SF_EVENT_TOKEN,e:ev};
-    if(step!=null)p.step=step;
-    if(src)p.src=src;
+    var k="sf_sid",v=sessionStorage.getItem(k);
+    if(!v){v=(crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now().toString(36)+Math.random().toString(36).slice(2,10));sessionStorage.setItem(k,v)}
+    return v;
+  }catch(e){return ""}
+}
+function sfSend(p){
+  try{
+    p.t=SF_EVENT_TOKEN;p.sid=sfSid();p.hp="";           /* hp = honeypot: bots fill it, worker drops those */
+    p.page=SF_PAGE_NAME;p.page_version=SF_PAGE_VERSION;
+    if(p.src==null){var s0=qs();if(s0)p.src=s0}
     var body=JSON.stringify(p);
-    if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"application/json"}))}
-    else{fetch(SF_EVENT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:body,keepalive:true})}
+    if(window.fetch){fetch(SF_EVENT_URL,{method:"POST",body:body,keepalive:true})["catch"](function(){})}
+    else if(navigator.sendBeacon){navigator.sendBeacon(SF_EVENT_URL,new Blob([body],{type:"text/plain"}))}
   }catch(e){}
 }
-try{sfBeacon("view",null,qs())}catch(e){}
+/* legacy signature kept so every existing call site keeps working unchanged */
+function sfBeacon(ev,step,src){var p={e:ev};if(step!=null)p.step=step;if(src)p.src=src;sfSend(p)}
+function sfEvent(ev,extra){var p=extra||{};p.e=ev;sfSend(p)}
+
+/* view: + referrer and the FULL query string (today only ?source= was captured, so every other
+   campaign/UTM parameter was invisible) */
+try{sfEvent("view",{referrer:(document.referrer||""),qs:(location.search||"")})}catch(e){}
+
 /* form_start: first interaction with the form card (focus or input), fired once */
 (function(){var done=false;function fs(){if(done)return;done=true;try{sfBeacon("form_start")}catch(e){}}
   try{var cv=document.getElementById("convo");if(cv){cv.addEventListener("focusin",fs);cv.addEventListener("input",fs)}}catch(e){}})();
+
+/* STEP TIMING: step_start on entering a step, step_complete on leaving it FORWARD (with ms spent).
+   Called from show(). step_complete is what the worker's legacy KV "step" counter now counts, so
+   the existing per-day step counter keeps working with no gap. */
+/* Step 0 (the contact step) is ALREADY on screen at load — show() is never called for it — so its
+   timer is seeded here and step_start(0) is fired explicitly. Without this seed, step-0 dwell time
+   (the single most important drop-off number on the page) would be invisible, AND the legacy per-day
+   KV "step" counter would lose exactly one bump per session vs. the old beacon. */
+var SF_STEP_I=0,SF_STEP_AT=Date.now();
+function sfStep(i){
+  try{
+    if(SF_STEP_I===i)return;
+    if(SF_STEP_I!=null&&i>SF_STEP_I)sfEvent("step_complete",{step:SF_STEP_I,ms:Date.now()-SF_STEP_AT});
+    SF_STEP_I=i;SF_STEP_AT=Date.now();
+    sfEvent("step_start",{step:i});
+  }catch(e){}
+}
+try{sfEvent("step_start",{step:0})}catch(e){}
+
+/* FIELDS: focus + blur with time-in-field. selector carries "filled"/"empty" so an abandon
+   (left empty after focusing) is one WHERE clause away, without adding a column. */
+(function(){
+  try{
+    var cv=document.getElementById("convo");if(!cv)return;
+    var at=0,nm="";
+    var name=function(el){return el.id||el.name||(el.tagName||"").toLowerCase()};
+    cv.addEventListener("focusin",function(ev){
+      var el=ev.target;if(!el||!/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||""))return;
+      at=Date.now();nm=name(el);sfEvent("field_focus",{field:nm});
+    });
+    cv.addEventListener("focusout",function(ev){
+      var el=ev.target;if(!el||!/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName||""))return;
+      if(name(el)!==nm||!at)return;
+      var filled=!!(el.value&&String(el.value).trim());
+      sfEvent("field_abandon",{field:nm,ms:Date.now()-at,selector:filled?"filled":"empty"});
+      at=0;nm="";
+    });
+  }catch(e){}
+})();
+
+/* VALIDATION ERRORS: every blocking message on this page is a .err div toggled to display:block.
+   Observing them centrally means zero edits to the validation logic itself (nothing can break the
+   form), and it can never drift out of sync with a new validation path. */
+(function(){
+  try{
+    if(!window.MutationObserver)return;
+    var shown={};
+    var obs=new MutationObserver(function(muts){
+      for(var i=0;i<muts.length;i++){
+        var el=muts[i].target;if(!el||!el.id)continue;
+        var on=el.style&&el.style.display==="block";
+        if(on&&!shown[el.id]){shown[el.id]=1;sfEvent("validation_error",{field:el.id,step:(SF_STEP_I==null?null:SF_STEP_I)})}
+        else if(!on){shown[el.id]=0}
+      }
+    });
+    var errs=document.querySelectorAll(".err");
+    for(var j=0;j<errs.length;j++)obs.observe(errs[j],{attributes:true,attributeFilter:["style"]});
+  }catch(e){}
+})();
+
+/* CLICKS: links + buttons only, capped at 30/session so a rage-clicker cannot flood the store.
+   x/y are viewport-relative 0-1 floats (resolution independent, so heatmapping works across devices). */
+(function(){
+  try{
+    var n=0;
+    document.addEventListener("click",function(ev){
+      try{
+        if(n>=30)return;
+        var el=ev.target&&ev.target.closest?ev.target.closest("a[href],button,[role=button]"):null;
+        if(!el)return;
+        n++;
+        var sel=(el.tagName||"").toLowerCase()+(el.id?"#"+el.id:(el.className&&typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().split(/\s+/)[0]:""));
+        var w=window.innerWidth||1,h=window.innerHeight||1;
+        sfEvent("click",{selector:sel.slice(0,200),x:Math.round((ev.clientX/w)*1000)/1000,y:Math.round((ev.clientY/h)*1000)/1000});
+      }catch(e){}
+    },true);
+  }catch(e){}
+})();
+
+/* SCROLL DEPTH: one event each at 25/50/75/100% — answers "how far down does the page actually get read". */
+(function(){
+  try{
+    var marks=[25,50,75,100],hit={},tick=function(){
+      try{
+        var d=document.documentElement,b=document.body;
+        var H=Math.max(d.scrollHeight,b?b.scrollHeight:0)-(window.innerHeight||0);
+        if(H<=0)return;
+        var pct=Math.round(((window.pageYOffset||d.scrollTop||0)/H)*100);
+        for(var i=0;i<marks.length;i++){if(pct>=marks[i]&&!hit[marks[i]]){hit[marks[i]]=1;sfEvent("scroll",{scroll_pct:marks[i]})}}
+      }catch(e){}
+    };
+    window.addEventListener("scroll",function(){if(!window.__sfScrollQ){window.__sfScrollQ=1;setTimeout(function(){window.__sfScrollQ=0;tick()},250)}},{passive:true});
+  }catch(e){}
+})();
 
 /* ================= COUNTRY / TIER DATA (tier 1=core .. 4=pass) ================= */
 /* tier drives back-end routing; front-end stays capture-first for everyone */
@@ -584,12 +702,12 @@ renderCC("");
 
 /* ================= FORM STATE + ESTIMATE ENGINE ================= */
 /* ===EST-TABLE-START auto-generated by regen-estimate-table.py (edit ranges THERE + in the Estimate Anchors data, never here)=== */
-var EST_VERSION="v2-20260730";
+var EST_VERSION="v2-20260903";
 var SCOPES=[
-  {label:"A funnel + follow-up automations",lo:17,hi:28},
-  {label:"A full system, built from scratch",lo:42,hi:63},
+  {label:"A funnel + follow-up automations",lo:16,hi:26},
+  {label:"A full system, built from scratch",lo:39,hi:55},
   {label:"Redesign or rebuild what I have",lo:32,hi:46},
-  {label:"Fixes and cleanup",lo:5,hi:11},
+  {label:"Fixes and cleanup",lo:6,hi:11},
   {label:"Not sure yet, that’s fine",lo:11,hi:22}
 ];
 var ACCOUNTS=[
@@ -642,7 +760,7 @@ function show(i){
   snum.textContent=Math.min(i+1,7);
   bar.style.width=stepPct[i]+"%";
   if(i>=1&&i>lastShown){var rc=document.getElementById("convo").getBoundingClientRect();confetti.burst(rc.left+rc.width/2,rc.top+Math.min(180,rc.height*.32))}
-  if(i>lastShown){try{sfBeacon("step",i)}catch(e){}} /* forward step advance -> /event */
+  try{sfStep(i)}catch(e){} /* step_start on entry + step_complete (with ms) on leaving forward -> /event */
   lastShown=Math.max(lastShown,i);cur=i;
 }
 function chips(sel,items,onpick,multi){
@@ -700,7 +818,8 @@ function baseLead(){
     country:selCountry.n,country_code:selCountry.d,country_tier:selCountry.t,
     preferred_channel:"Email",lead_source:LEAD_SOURCE,
     company_hp:(document.getElementById("f-hp")?document.getElementById("f-hp").value:"")||"", /* suspect-guard honeypot */
-    estimate_version:EST_VERSION /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
+    estimate_version:EST_VERSION, /* which learned table this lead saw — powers the wiggle-room vs booking-rate analysis */
+    sid:(function(){try{return sfSid()}catch(e){return""}})() /* joins this lead to its behavior rows in the events store */
   };
 }
 function post(payload){
