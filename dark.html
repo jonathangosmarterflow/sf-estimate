@@ -363,8 +363,9 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
                 <input id="f-launchdate" type="date">
                 <div class="err" id="errdate">Please pick your launch date.</div>
               </div>
-              <label for="f-details" style="margin-top:14px">Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span></label>
-              <textarea id="f-details" maxlength="6000" rows="3" placeholder="Current tools, pages you need, examples you like, deadlines, anything..." style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:#191627;resize:vertical;margin-bottom:10px"></textarea>
+              <label for="f-details" style="margin-top:14px">Anything else about your project? <span style="font-weight:400;opacity:.7">(the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span></label>
+              <textarea id="f-details" maxlength="6000" rows="3" placeholder="e.g. we get 40 calls a week and miss half of them, want an AI receptionist + CRM" style="width:100%;padding:12px 14px;border-radius:11px;font-size:14px;font-family:inherit;border:1px solid #e7e2f4;background:#fdfcff;color:#191627;resize:vertical;margin-bottom:10px"></textarea>
+              <div class="err" id="errdetails">Please tell us a bit about your project so we can estimate it.</div>
               <button class="cbtn" id="goFinish">Get my estimate &#8594;</button>
               <div class="err" id="errtime">Please pick a timeline above.</div>
               <button class="backl">&#8592; back</button>
@@ -468,7 +469,7 @@ var LEAD_SOURCE=qs()||"Landing page (Deep Flow)";
 /* 🔖 PAGE VERSION — BUMP THIS ON ANY LAYOUT OR COPY CHANGE TO THIS PAGE.
    Format vYYYY-MM-DD + a letter for same-day revisions. It stamps every event row so a
    metrics shift can be attributed to the exact page revision that caused it. */
-var SF_PAGE_VERSION="v2026-08-18a-dark";
+var SF_PAGE_VERSION="v2026-09-17a-dark";
 var SF_PAGE_NAME="home";
 var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
     SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
@@ -899,8 +900,8 @@ function updateDetailPrompt(){
     lab.innerHTML='What\u2019s broken? <span style="font-weight:400;opacity:.7">(the more detail, the sharper and often cheaper your quote &middot; tip: tap your keyboard mic and just talk)</span>';
     ta.placeholder="What's breaking, where you notice it (a missed lead, a text that never sends), when it started, and what changed right before...";
   }else{
-    lab.innerHTML='Anything else about your project? <span style="font-weight:400;opacity:.7">(optional, the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span>';
-    ta.placeholder="Current tools, pages you need, examples you like, deadlines, anything...";
+    lab.innerHTML='Anything else about your project? <span style="font-weight:400;opacity:.7">(the more detail the sharper your estimate &middot; tip: tap your keyboard mic and just talk)</span>';
+    ta.placeholder="e.g. we get 40 calls a week and miss half of them, want an AI receptionist + CRM";
   }
 }
 
@@ -942,15 +943,34 @@ function needsValid(){
     return true; /* any real chip (including "Not sure yet") is a valid answer */
   });
 }
+/* PROJECT DETAILS ARE REQUIRED (Jonathan, 2026-09-17). Any non-empty text passes: there is NO
+   minimum length. The form stays slippery (lead volume is the bottleneck, not calendar capacity);
+   the real qualification questions live after the estimate, at the booking step. Directory leads
+   arrive with this box already filled by the worker's prefill injection, so they pass untouched. */
+function detailsValid(){
+  var d=document.getElementById("f-details");
+  return !!(d&&(d.value||"").trim());
+}
+try{document.getElementById("f-details").addEventListener("input",function(){
+  if((this.value||"").trim()){this.style.borderColor="";var ed=document.getElementById("errdetails");if(ed)ed.style.display="none";}
+});}catch(_){}
+function detailsBlock(){
+  var d=document.getElementById("f-details");
+  if(d)d.style.borderColor="#ff7a7a";
+  var ed=document.getElementById("errdetails");if(ed)ed.style.display="block";
+  try{d.focus()}catch(_){}
+}
 function finishForm(timelineLabel){
-  /* HARD GUARD (belt + suspenders): submit can NEVER fire without the three essentials —
-     business name, a valid email, and a real project need. Route back to the first missing step. */
+  /* HARD GUARD (belt + suspenders): submit can NEVER fire without the four essentials:
+     business name, a valid email, a real project need, and the project details (2026-09-17).
+     Route back to the first missing step. */
   var bizEl=document.getElementById("f-biz"),emailEl=document.getElementById("f-email");
   var biz=(bizEl.value||"").trim(),email=(emailEl.value||"").trim(),emailOk=/.+@.+\..+/.test(email);
-  if(!emailOk||!biz||!needsValid()){
+  if(!emailOk||!biz||!needsValid()||!detailsValid()){
     if(!emailOk){show(0);emailEl.style.borderColor="#ff7a7a";var e0=document.getElementById("err0");e0.textContent="Please add a valid email so we can send your estimate.";e0.style.display="block";}
     else if(!biz){show(1);bizEl.style.borderColor="#ff7a7a";document.getElementById("err1").style.display="block";}
-    else{show(4);document.getElementById("err4").style.display="block";}
+    else if(!needsValid()){show(4);document.getElementById("err4").style.display="block";}
+    else{show(6);detailsBlock();}
     return;
   }
   state.timelineLabel=timelineLabel;updateEstimate(100,"&#10003; Estimate locked. It&#39;s on the way to your inbox now.");
@@ -1008,6 +1028,10 @@ chips(".chips-time",TIMES,function(i){
   if(TIMES[i].date){try{document.getElementById("f-launchdate").focus()}catch(_){}}
 });
 document.getElementById("goFinish").addEventListener("click",function(){
+  /* project details are REQUIRED (2026-09-17): no advancing past this step with an empty box. */
+  if(!detailsValid()){detailsBlock();return}
+  document.getElementById("f-details").style.borderColor="";
+  document.getElementById("errdetails").style.display="none";
   /* timeline is helpful but skippable: one soft nudge, then allow submit without it (submit stays explicit, CJ 7/14) */
   if(state.time===null||state.time===undefined){
     if(!window.__timeSoft){window.__timeSoft=true;var et=document.getElementById("errtime");et.textContent="Pick a timeline for a sharper estimate, or tap again to skip.";et.style.display="block";return}
