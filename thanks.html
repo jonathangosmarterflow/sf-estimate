@@ -84,7 +84,7 @@ main{position:relative;z-index:1}
       <h2>Lock in your free consulting call</h2>
       <p class="sub">30 minutes, shaped around what you need: consulting on your project, a live AI-powered audit of your account, or troubleshooting something specific. We lock the exact plan together. No obligation.</p>
       <iframe class="calframe" src="https://link.gosmarterflow.com/widget/bookings/audit30m" id="audit30m_iframe" title="Book your free consulting call" onload="try{window.__calOK=1}catch(e){}"></iframe>
-      <p class="calfallback" id="calfallback">Calendar not loading? <a href="https://ai.gosmarterflow.com/book">Book your call here</a> &rarr;</p>
+      <p class="calfallback" id="calfallback">Calendar not loading? <a href="https://ai.gosmarterflow.com/book" data-cta="call-after">Book your call here</a> &rarr;</p>
     </div>
   </div>
 
@@ -121,7 +121,7 @@ setTimeout(function(){try{if(!window.__calOK){var fb=document.getElementById("ca
    form behavior and their lead record), page + page_version. fetch(keepalive) first, sendBeacon
    fallback; text/plain body = simple request = no CORS preflight. */
 /* 🔖 PAGE VERSION — BUMP ON ANY LAYOUT OR COPY CHANGE TO THIS PAGE. */
-var SF_PAGE_VERSION="v2026-08-18b";
+var SF_PAGE_VERSION="v2026-10-01a";
 var SF_PAGE_NAME="thanks";
 var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
     SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
@@ -159,8 +159,11 @@ try{sfEvent("thanks_view",{referrer:(document.referrer||""),qs:(location.search|
         if(!el)return;
         n++;
         var sel=(el.tagName||"").toLowerCase()+(el.id?"#"+el.id:(el.className&&typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().split(/\s+/)[0]:""));
-        var w=window.innerWidth||1,h=window.innerHeight||1;
-        sfEvent("click",{selector:sel.slice(0,200),x:Math.round((ev.clientX/w)*1000)/1000,y:Math.round((ev.clientY/h)*1000)/1000});
+        var w=window.innerWidth||1,h=window.innerHeight||1,p={selector:sel.slice(0,200),x:Math.round((ev.clientX/w)*1000)/1000,y:Math.round((ev.clientY/h)*1000)/1000};
+        /* CTA CLICK SPLIT (2026-10-01): data-cta rides this one click event as field "cta:<name>" + a Clarity tag */
+        var cta=el.getAttribute&&el.getAttribute("data-cta");
+        if(cta){p.field=("cta:"+cta).slice(0,60);try{if(typeof window.clarity==="function")window.clarity("event","cta_"+cta.replace(/-/g,"_"))}catch(_){}}
+        sfEvent("click",p);
       }catch(e){}
     },true);
   }catch(e){}

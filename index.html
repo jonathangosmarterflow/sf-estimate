@@ -255,8 +255,8 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
       <p class="sub">Get an instant AI estimate built from real billed hours, no sales call required. Or book a free 30-minute call and we will map it out together. Your choice.</p>
       <div class="trustmini"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> Rated <b>5/5</b> across <b>65+ reviews</b> on the official HighLevel Directory &middot; <b>#3</b> most-reviewed</div>
       <div class="v3btns">
-        <a href="#hero" class="bigbtn primary" id="doorEstimate">Get my instant estimate &#8594;<small>2 minutes &middot; no call required</small></a>
-        <a href="book.html" class="bigbtn ghost booklink" id="doorBook">Book a free 30-minute call &#8594;<small>prefer to talk it through live</small></a>
+        <a href="#hero" class="bigbtn primary" id="doorEstimate" data-cta="estimate">Get my instant estimate &#8594;<small>2 minutes &middot; no call required</small></a>
+        <a href="book.html" class="bigbtn ghost booklink" id="doorBook" data-cta="call">Book a free 30-minute call &#8594;<small>prefer to talk it through live</small></a>
       </div>
     </div>
 
@@ -291,7 +291,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
               <button class="cbtn go1" id="go1">Start my estimate</button>
               <div class="err" id="err0">Please add a valid email so we can send your estimate.</div>
               <div class="fine">Free. No sales call. Takes about 60 seconds.</div>
-              <div class="fine" style="margin-top:6px">Rather talk it through live? <a href="book.html" class="booklink" style="color:#7c3aed;font-weight:600">Book a free consulting call &#8594;</a></div>
+              <div class="fine" style="margin-top:6px">Rather talk it through live? <a href="book.html" class="booklink" data-cta="call-inform" style="color:#7c3aed;font-weight:600">Book a free consulting call &#8594;</a></div>
             </div>
             <!-- STEP 1: business -->
             <div class="screen s1">
@@ -386,7 +386,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
                 <svg viewBox="0 0 60 60" fill="none"><circle cx="30" cy="30" r="26" stroke-width="3.5"/><path d="M19 31l8 8 15-17" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <div class="dtitle">Thank you! Your estimate is on its way</div>
                 <div class="dsub" id="dsub">We just sent your personalized estimate, hours and price, to your inbox from Jonathan at gosmarterflow.com. Check spam if you don&#39;t see it.</div>
-                <a class="dbtn" id="dbtn" href="https://link.gosmarterflow.com/widget/bookings/audit30m">Book your free consulting call &rarr;</a>
+                <a class="dbtn" id="dbtn" data-cta="call-after" href="https://link.gosmarterflow.com/widget/bookings/audit30m">Book your free consulting call &rarr;</a>
               </div>
             </div>
           </div>
@@ -433,7 +433,7 @@ h2.sec{font-size:clamp(26px,3vw,34px);text-align:center;margin-bottom:14px;line-
 <div class="final">
   <h2>Ready for a straight answer?</h2>
   <p>Get your free, personalized estimate now. A real number in your inbox in minutes, no pressure and no obligation.</p>
-  <a href="#hero" class="btn-lg" id="jumpEstimate">Get my free estimate &#8594;</a>
+  <a href="#hero" class="btn-lg" id="jumpEstimate" data-cta="estimate-bottom">Get my free estimate &#8594;</a>
 </div>
 
 <!-- ===== FOOTER ===== -->
@@ -471,7 +471,7 @@ var LEAD_SOURCE=qs()||"Landing page (v3b two-door)";
 /* 🔖 PAGE VERSION — BUMP THIS ON ANY LAYOUT OR COPY CHANGE TO THIS PAGE.
    Format vYYYY-MM-DD + a letter for same-day revisions. It stamps every event row so a
    metrics shift can be attributed to the exact page revision that caused it. */
-var SF_PAGE_VERSION="v2026-09-17a";
+var SF_PAGE_VERSION="v2026-10-01a";
 var SF_PAGE_NAME="home";
 var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
     SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
@@ -577,8 +577,13 @@ try{sfEvent("step_start",{step:0})}catch(e){}
         if(!el)return;
         n++;
         var sel=(el.tagName||"").toLowerCase()+(el.id?"#"+el.id:(el.className&&typeof el.className==="string"&&el.className.trim()?"."+el.className.trim().split(/\s+/)[0]:""));
-        var w=window.innerWidth||1,h=window.innerHeight||1;
-        sfEvent("click",{selector:sel.slice(0,200),x:Math.round((ev.clientX/w)*1000)/1000,y:Math.round((ev.clientY/h)*1000)/1000});
+        var w=window.innerWidth||1,h=window.innerHeight||1,p={selector:sel.slice(0,200),x:Math.round((ev.clientX/w)*1000)/1000,y:Math.round((ev.clientY/h)*1000)/1000};
+        /* CTA CLICK SPLIT (2026-10-01): a button with data-cta rides THIS one click event as field "cta:<name>"
+           (never a second beacon, so a click is counted once) and tags the Clarity session so the heatmap
+           can be filtered by which button was picked. */
+        var cta=el.getAttribute&&el.getAttribute("data-cta");
+        if(cta){p.field=("cta:"+cta).slice(0,60);try{if(typeof window.clarity==="function")window.clarity("event","cta_"+cta.replace(/-/g,"_"))}catch(_){}}
+        sfEvent("click",p);
       }catch(e){}
     },true);
   }catch(e){}
@@ -1133,7 +1138,10 @@ function glideToForm(e){
     if(n&&!("ontouchstart"in window)){try{n.focus({preventScroll:true})}catch(_){n.focus()}}
   },reduced?0:540);
 }
-document.getElementById("jumpEstimate").addEventListener("click",glideToForm);
+/* 2026-10-01: the bottom "Get my free estimate" button ran glideToForm, which scrolled to the top and
+   pulsed a form that is still HIDDEN (display:none until a door is picked), so the click did nothing
+   visible. It now opens the form exactly like the top estimate door. */
+document.getElementById("jumpEstimate").addEventListener("click",function(e){startEstimate(e)});
 
 /* V3 two-door: Door A ("Show me my price") starts the estimate — glide the form card into
    view, pulse it, focus the name field (non-touch). Same feel as glideToForm, but scrolls
