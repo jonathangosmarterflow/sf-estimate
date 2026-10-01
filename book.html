@@ -7,9 +7,21 @@
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="favicon.png">
+<!-- WIDGET SPEED (2026-10-01): warm the booking widget's hosts while this page parses. The widget iframe
+     (link.gosmarterflow.com) is same-site with this page, so these sockets are reused inside the iframe.
+     crossorigin = the widget's module bundle and its free-slots fetch (CORS mode); plain = classic scripts. -->
+<link rel="preconnect" href="https://link.gosmarterflow.com">
+<link rel="preconnect" href="https://stcdn.leadconnectorhq.com">
+<link rel="preconnect" href="https://stcdn.leadconnectorhq.com" crossorigin>
+<link rel="preconnect" href="https://backend.leadconnectorhq.com" crossorigin>
+<link rel="preconnect" href="https://storage.googleapis.com">
+<link rel="preconnect" href="https://link.msgsndr.com">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- non-render-blocking fonts (2026-10-01): the blocking stylesheet held the inline script below it and so
+     delayed the widget iframe request by ~220ms; system-ui is the fallback until Sora/Jakarta arrive -->
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Sora:wght@700;800&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
 <style>
 /* ===== ELECTRIC tokens (same as the funnel page) ===== */
 :root{
@@ -53,12 +65,21 @@ main{position:relative;z-index:1}
 .card h2{font-size:clamp(21px,2.6vw,27px);margin-bottom:8px}
 .card .sub{color:var(--muted);font-size:15px;margin:0 0 18px;max-width:640px}
 .calframe{width:100%;border:0;border-radius:14px;min-height:760px;background:#fff}
+/* loading state (2026-10-01): sits BEHIND a transparent iframe until the iframe's load event, so a slow
+   widget reads as "loading", never as a blank or broken box */
+.calwrap{position:relative}
+.calload{position:absolute;top:0;left:0;right:0;z-index:0;display:flex;align-items:center;justify-content:center;gap:10px;padding:56px 16px;color:var(--muted);font-size:15px;font-weight:600;pointer-events:none}
+.calload .spin{width:18px;height:18px;flex:0 0 18px;border:2.5px solid var(--line);border-top-color:var(--vio);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.calwrap .calframe{position:relative;z-index:1;background:transparent}
+.calwrap.ready .calframe{background:#fff}
+.calwrap.ready .calload{display:none}
 
 .footer{position:relative;z-index:1;border-top:1px solid var(--line);margin-top:44px;padding:26px 0 40px;text-align:center;color:var(--muted2);font-size:13px}
 .footer .wordmark{font-size:16px;margin-bottom:6px}
 
 @media(max-width:760px){.calframe{min-height:820px}.card{padding:22px 18px}}
-@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}.calload .spin{animation:none!important}}
 </style>
 <!-- Microsoft Clarity (heatmaps + session recordings) -->
 <script>(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","xnakg1kh42")</script>
@@ -79,20 +100,14 @@ main{position:relative;z-index:1}
       <div class="kick">Pick your time</div>
       <h2>Pick a day, then choose a time</h2>
       <p class="sub">Select a highlighted day to see its open times, shown in your timezone. You get a confirmation and calendar invite right away.</p>
-      <iframe class="calframe" src="https://link.gosmarterflow.com/widget/bookings/audit30m" id="audit30m_iframe" title="Book your free consulting call"></iframe>
-    </div>
-  </div>
-
-  <div class="footer">
-    <div class="wordmark">Smarter<b>Flow</b></div>
-    HighLevel Certified &middot; jonathan@gosmarterflow.com<br>
-    &copy; 2026 Smarter Flow &middot; All rights reserved
-  </div>
-</main>
-
-<script src="https://link.msgsndr.com/js/form_embed.js"></script>
-<script>
-/* prefill the booking widget from the estimate form (n/e/p URL params ride from index -> here) */
+      <div class="calwrap" id="calwrap">
+        <div class="calload" aria-hidden="true"><span class="spin"></span>Loading your available times...</div>
+        <iframe class="calframe" src="https://link.gosmarterflow.com/widget/bookings/audit30m" id="audit30m_iframe" title="Book your free consulting call" loading="eager" fetchpriority="high" onload="this.parentNode.classList.add('ready')"></iframe>
+      </div>
+      <script>
+/* prefill the booking widget from the estimate form (n/e/p URL params ride from index -> here).
+   2026-10-01: runs RIGHT AFTER the iframe tag (it used to run after form_embed.js, ~1.6s later, which
+   restarted an already-loading widget for every prefilled lead). */
 (function(){
   var q=new URLSearchParams(location.search);
   var name=(q.get("n")||"").trim(),email=(q.get("e")||"").trim(),phone=(q.get("p")||"").trim();
@@ -106,6 +121,21 @@ main{position:relative;z-index:1}
   if(phone)u.searchParams.set("phone",phone);
   f.src=u.toString();
 })();
+      </script>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="wordmark">Smarter<b>Flow</b></div>
+    HighLevel Certified &middot; jonathan@gosmarterflow.com<br>
+    &copy; 2026 Smarter Flow &middot; All rights reserved
+  </div>
+</main>
+
+<!-- async (2026-10-01): form_embed.js (iframe resizer) checks document.readyState and inits either way, and
+     nothing on this page calls it synchronously; as a blocking script it held DOMContentLoaded ~1.6s -->
+<script async src="https://link.msgsndr.com/js/form_embed.js"></script>
+<script>
 
 /* ================= EVENT BEACONS v2 (funnel telemetry -> /event worker) =================
    NEW 2026-08-18: this page had NO telemetry at all, so every lead who took the book-a-call door
@@ -113,7 +143,7 @@ main{position:relative;z-index:1}
    widget is never affected. fetch(keepalive) first, sendBeacon fallback; text/plain body = simple
    request = no CORS preflight. The session id joins these rows to the same visitor's form behavior. */
 /* 🔖 PAGE VERSION — BUMP ON ANY LAYOUT OR COPY CHANGE TO THIS PAGE. */
-var SF_PAGE_VERSION="v2026-09-30a";
+var SF_PAGE_VERSION="v2026-10-01a";
 var SF_PAGE_NAME="book";
 var SF_EVENT_URL="https://hook.gosmarterflow.com/event",
     SF_EVENT_TOKEN="5a152526d628d4c304e6a75da25d7cbf8c20fd16e7debac0";
