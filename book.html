@@ -108,10 +108,21 @@ main{position:relative;z-index:1}
 /* prefill the booking widget from the estimate form (n/e/p URL params ride from index -> here).
    2026-10-01: runs RIGHT AFTER the iframe tag (it used to run after form_embed.js, ~1.6s later, which
    restarted an already-loading widget for every prefilled lead). */
+/* channel attribution pass-through (2026-10-19 owner directive, clean per-channel data; APS launch gate (f)):
+   ?source=aps-<campaign> and explicit utm_* ride from the link onto the booking widget URL and the book_view
+   event, so the D1 join can attribute the booking. Restored 2026-10-24: the snippet the channel-attribution
+   suite (e1-e8) asserts was never on this file, which left every worker deploy gated red. */
+function sfAttr(){
+  var q=new URLSearchParams(location.search);
+  var src=(q.get("source")||"").trim(),us=(q.get("utm_source")||"").trim(),um=(q.get("utm_medium")||"").trim(),uc=(q.get("utm_campaign")||"").trim();
+  if(src&&/^aps-/.test(src)){us=us||src;um=um||"cold-email";uc=uc||src}
+  return {source:src,utm_source:us,utm_medium:um,utm_campaign:uc};
+}
 (function(){
   var q=new URLSearchParams(location.search);
   var name=(q.get("n")||"").trim(),email=(q.get("e")||"").trim(),phone=(q.get("p")||"").trim();
-  if(!name&&!email&&!phone)return;
+  var at=sfAttr();
+  if(!name&&!email&&!phone&&!at.source&&!at.utm_source&&!at.utm_medium&&!at.utm_campaign)return;
   var f=document.getElementById("audit30m_iframe");if(!f)return;
   var parts=name.split(/\s+/),u=new URL(f.src);
   if(parts[0])u.searchParams.set("first_name",parts[0]);
@@ -119,6 +130,7 @@ main{position:relative;z-index:1}
   if(name)u.searchParams.set("full_name",name);
   if(email)u.searchParams.set("email",email);
   if(phone)u.searchParams.set("phone",phone);
+  ["source","utm_source","utm_medium","utm_campaign"].forEach(function(k){if(at[k])u.searchParams.set(k,at[k])});
   f.src=u.toString();
 })();
       </script>
@@ -166,7 +178,7 @@ function sfSend(p){
   }catch(e){}
 }
 function sfEvent(ev,extra){var p=extra||{};p.e=ev;sfSend(p)}
-try{sfEvent("book_view",{referrer:(document.referrer||""),qs:(location.search||"")})}catch(e){}
+try{var a0=sfAttr(),e0=(new URLSearchParams(location.search).get("e")||"").trim();sfEvent("book_view",{referrer:(document.referrer||""),qs:(location.search||""),source:a0.source,utm_source:a0.utm_source,utm_medium:a0.utm_medium,utm_campaign:a0.utm_campaign,email:e0})}catch(e){}
 /* book_click: any interaction with the booking widget or a booking link. The calendar itself is a
    cross-origin iframe we cannot read, so we record (a) explicit link/button clicks and (b) the
    window losing focus to the iframe, which is the closest available proxy for "started booking". */
